@@ -1,3 +1,7 @@
+package DS_as1;
+
+import java.util.List;
+
 public interface Broker extends Node
 {
     private List<Subscriber> registeredSubscribers;
