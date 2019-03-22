@@ -4,25 +4,13 @@ import java.util.List;
 
 public interface Node
 {
-    private List<Broker> brokers;
+    public static List<Broker> brokers = null;
 
-    public void init(int)
-    {
+    //public void init(int x);
 
-    }
+    //public void connect();
 
-    public void connect()
-    {
+    //public void disconnect();
 
-    }
-
-    public void disconnect()
-    {
-
-    }
-
-    public void updateNodes()
-    {
-
-    }
+    //public void updateNodes();
 }

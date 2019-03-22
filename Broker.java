@@ -4,31 +4,16 @@ import java.util.List;
 
 public interface Broker extends Node
 {
-    private List<Subscriber> registeredSubscribers;
-    private List<Publisher> registeredPublishers;
+    //public List<Subscriber> registeredSubscribers;
+    //public List<Publisher> registeredPublishers;
 
-    public void calculateKeys()
-    {
+    //public void calculateKeys();
 
-    }
+    //public Publisher acceptConnection(Publisher pub);
 
-    public Publisher acceptConnection(Publisher)
-    {
+    //public Subscriber acceptConnection(Subscriber sub);
 
-    }
+    //public void notifyPublisher(String msg);
 
-    public Subscriber acceptConnection(Subscriber)
-    {
-
-    }
-
-    public void notifyPublisher(String)
-    {
-
-    }
-
-    public void pull(Topic)
-    {
-
-    }
+    //public void pull(Topic topic);
 }
