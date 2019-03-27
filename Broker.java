@@ -1,19 +1,20 @@
-package DS_as1;
-
 import java.util.List;
 
-public interface Broker extends Node
-{
-    //public List<Subscriber> registeredSubscribers;
-    //public List<Publisher> registeredPublishers;
+public interface Broker extends Node {
+
+    public final static List<Subscriber> registeredSubscribers = null;
+
+    public final static List<Publisher> registeredPublishers = null;
 
     public void calculateKeys();
 
-    public void acceptConnection(Publisher pub);
+    public Publisher acceptConnection(Publisher p);
 
-    public void acceptConnection(Subscriber sub);
+    public Subscriber acceptConnection(Subscriber p);
 
-    public void notifyPublisher(String msg);
+    public  void notifyPublisher(String s);
 
-    //public void pull(Topic topic);
+    public void pull(Topic t);
+
+
 }

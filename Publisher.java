@@ -1,12 +1,11 @@
-package DS_as1;
+public interface Publisher extends Node {
 
-public interface Publisher extends Node
-{
-    //public void getBrokerList();
+    public void getBrokerList();
 
-    //public Broker hashTopic(Topic topic);
+    public void hashTopic(Topic t);
 
-    //public void push(Topic topic, Value val);
+    public void push(Topic t, Value v);
 
-    //public void notifyFailure(Broker brok);
+    public void notifyFailure(Broker b);
+
 }

@@ -1,10 +1,9 @@
-package DS_as1;
+public interface Subscriber extends Node {
 
-public interface Subscriber extends Node
-{
-    //public void register(Broker brok, Topic topic);
+    public void register(Broker b, Topic t);
 
-    //public void disconnect(Broker brok, Topic topic);
+    public void disconnect(Broker b , Topic t);
 
-    //public void visualiseData(Topic topic, Value val);
+    public void visualiseData(Topic t, Value v);
+
 }
