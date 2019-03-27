@@ -7,13 +7,13 @@ public interface Broker extends Node
     //public List<Subscriber> registeredSubscribers;
     //public List<Publisher> registeredPublishers;
 
-    //public void calculateKeys();
+    public void calculateKeys();
 
-    //public Publisher acceptConnection(Publisher pub);
+    public void acceptConnection(Publisher pub);
 
-    //public Subscriber acceptConnection(Subscriber sub);
+    public void acceptConnection(Subscriber sub);
 
-    //public void notifyPublisher(String msg);
+    public void notifyPublisher(String msg);
 
     //public void pull(Topic topic);
 }

@@ -1,14 +1,15 @@
 package DS_as1;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public interface Node
 {
-    public static List<Broker> brokers = null;
+    List<BrokerImpl> brokers = null;
 
     //public void init(int x);
 
-    //public void connect();
+    public void connect();
 
     //public void disconnect();
 
