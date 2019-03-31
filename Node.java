@@ -7,7 +7,7 @@ public interface Node
 {
     List<BrokerImpl> brokers = null;
 
-    //public void init(int x);
+    public void init(int x);
 
     public void connect();
 

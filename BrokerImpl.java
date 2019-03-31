@@ -14,15 +14,19 @@ import javax.xml.bind.DatatypeConverter;
 
 
 public class BrokerImpl extends Thread implements Broker {
+
     public String brokerID;
     private Socket requestSocket = null;
-    public String ip = "192.168.1.12";
+    private ObjectOutputStream out = null;
+    private ObjectInputStream in = null;
+    public String ip = "192.168.1.11";
     public String port;
     private ServerSocket replySocket = null;
     public List<Topic> topics = new ArrayList<Topic>();
     private static List<BrokerImpl>  broker;
     public int hashipport;
-    public static PublisherImpl publisher = new PublisherImpl("1");
+    public static final PublisherImpl publisher = new PublisherImpl();
+    public static final SubscriberImpl subscriber = new SubscriberImpl();
    //public List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>();
 
 
@@ -31,7 +35,26 @@ public class BrokerImpl extends Thread implements Broker {
     }
 
     public void run() {
-        System.out.println("Thread " + brokerID + " started.");
+        System.out.println("Broker with ID " + brokerID + " started.");
+
+        System.out.println(this.brokerID + ": ");
+        for(Topic t : this.topics)
+        {
+            System.out.print(t.getBusLine() + ", ");
+        }
+        System.out.println("\n");
+
+        this.acceptConnection(publisher);
+        String topic = "";
+        for(Topic t : this.topics)
+        {
+            topic += t.getBusLine();
+            topic += ",";
+        }
+        this.notifyPublisher(topic);
+        this.notifyPublisher("bye");
+
+        this.acceptConnection(subscriber);
     }
 
     public static void main(String[] args) {
@@ -43,27 +66,10 @@ public class BrokerImpl extends Thread implements Broker {
             for(int i = 0; i < noBrokers; i++)
             {
                 broker.add(new BrokerImpl(Integer.toString(i)));
-                System.out.println("ID " + i);
             }
-
-            for(BrokerImpl bi : broker)
-            {
-                bi.start();
-                bi.init(3);
-                try
-                {
-                    bi.join();
-                }
-                catch (Exception e)
-                {
-                    System.out.println("Interrupted Thread. ");
-                }
-            }
-
 
             File buslines = new File("DS_project_dataset/busLinesNew.txt");
-            try
-            {
+            try {
                 FileReader fr = new FileReader(buslines);
                 BufferedReader br = new BufferedReader(fr);
 
@@ -71,60 +77,40 @@ public class BrokerImpl extends Thread implements Broker {
                 String busID;
                 String lineCode;
 
-                while((line = br.readLine()) != null)
-                {
+                while ((line = br.readLine()) != null) {
                     busID = line.split(",")[1];
                     lineCode = line.split(",")[0];
 
-                    int hashtopic = 0;
-                    String sha1 = null;
-                    try {
-                        MessageDigest msdDigest = MessageDigest.getInstance("SHA-1");
-                        msdDigest.update(busID.getBytes("UTF-8"), 0, busID.length());
-                        sha1 = DatatypeConverter.printHexBinary(msdDigest.digest());
-                        hashtopic = Integer.parseInt(sha1);
-                    } catch (UnsupportedEncodingException | NoSuchAlgorithmException e) {
-                    }
-
-                    System.out.println("hash tou " + busID + ": " + hashtopic);
+                    int hashtopic = busID.hashCode();
                     int nearestNode = Integer.MAX_VALUE;
 
-                    for(BrokerImpl b : broker)
-                    {
-                        System.out.println("hash tou ip port tou " + b.brokerID + ": " + b.hashipport);
-                        if(hashtopic <= b.hashipport && b.hashipport < nearestNode)
-                        {
+                    for (BrokerImpl b : broker) {
+                        b.init(3);
+                        if (hashtopic <= b.hashipport && b.hashipport < nearestNode) {
                             nearestNode = b.hashipport;
                         }
                     }
-                    for(BrokerImpl b : broker) {
-                        if(b.hashipport == nearestNode) b.topics.add(new Topic(lineCode));
+                    for (BrokerImpl b : broker) {
+                        if (b.hashipport == nearestNode) b.topics.add(new Topic(lineCode));
                     }
                 }
-                for(BrokerImpl b : broker)
-                {
-                    System.out.println(b.brokerID + ": ");
-                    for(Topic t : b.topics)
-                    {
-                        System.out.print(t.getBusLine() + ", ");
-                    }
-                    System.out.print("\n");
-                }
-                /*for(BrokerImpl b : broker)
-                {
-                    b.acceptConnection(publisher);
-                    String topic = "";
-                    for(Topic t : b.topics)
-                    {
-                        topic += t.getBusLine();
-                        topic += ",";
-                    }
-                    b.notifyPublisher(topic);
-                }*/
             }
             catch (IOException e)
             {
                 System.out.println("Error reading busLinesNew.txt .");
+            }
+
+            for(BrokerImpl bi : broker)
+            {
+                bi.start();
+                /*try
+                {
+                    bi.join();
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Interrupted Thread. ");
+                }*/
             }
         }
     }
@@ -145,11 +131,9 @@ public class BrokerImpl extends Thread implements Broker {
     }
 
     public void acceptConnection(Publisher pub) {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
         String publisher;
         try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.1.12"), 4321);
+            requestSocket = new Socket(InetAddress.getByName("192.168.1.11"), 4321);
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
 
@@ -157,11 +141,9 @@ public class BrokerImpl extends Thread implements Broker {
                 publisher = (String) in.readObject();
                 System.out.println("Server > " + publisher);
 
-                out.writeObject("Thread with id " + brokerID + " and hash " + hashipport);
+                out.writeObject("Broker with id " + brokerID + " connected.");
                 out.flush();
 
-                out.writeObject("bye");
-                out.flush();
             } catch (ClassNotFoundException classNot) {
                 System.out.println("data received in unknown format");
             }
@@ -169,7 +151,7 @@ public class BrokerImpl extends Thread implements Broker {
             System.err.println("You are trying to connect to an unknown host!");
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
+        } /*finally {
             try {
                 in.close();
                 out.close();
@@ -177,7 +159,7 @@ public class BrokerImpl extends Thread implements Broker {
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-        }
+        }*/
     }
 
 
@@ -185,13 +167,13 @@ public class BrokerImpl extends Thread implements Broker {
         Socket connection = null;
         String message = null;
         try {
-            replySocket = new ServerSocket(4324);
-            while (true) {
+            replySocket = new ServerSocket(Integer.parseInt(brokerID)+1000);
+            while(true) {
                 connection = replySocket.accept();
                 ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
 
-                out.writeObject("Broker successfully connected to Client. ");
+                out.writeObject("Broker " + brokerID + " successfully connected to Client.");
                 out.flush();
                 do {
                     try {
@@ -219,29 +201,22 @@ public class BrokerImpl extends Thread implements Broker {
 
 
     public void notifyPublisher(String msg) {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
         try {
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            in = new ObjectInputStream(requestSocket.getInputStream());
+            out.writeObject(msg);
+            out.flush();
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+        if(msg.equals("bye")){
             try {
-                out.writeObject(msg);
-                out.flush();
-            } catch (UnknownHostException unknownHost) {
-                System.err.println("You are trying to connect to an unknown host!");
+                in.close();
+                out.close();
+                requestSocket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
-            } finally {
-                try {
-                    in.close();
-                    out.close();
-                    requestSocket.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 }

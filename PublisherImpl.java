@@ -1,5 +1,7 @@
 package DS_as1;
 
+import com.sun.security.ntlm.Server;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -11,18 +13,26 @@ import java.util.List;
 
 public class PublisherImpl implements Publisher
 {
+    private static final int port = 4321;
+    private static ServerSocket providerSocket = null;
+
+
     public static void main(String[] args)
     {
         new PublisherImpl().connect();
     }
 
+    @Override
+    public void init(int x) {
+
+    }
+
     public void connect()
     {
-        ServerSocket providerSocket = null;
         Socket connection = null;
         String message = null;
         try {
-            providerSocket = new ServerSocket(4321);
+            providerSocket = new ServerSocket(port);
 
             while (true) {
                 connection = providerSocket.accept();
@@ -42,25 +52,15 @@ public class PublisherImpl implements Publisher
                 in.close();
                 out.close();
                 connection.close();
-                System.out.println(brokers.size());
-                for(BrokerImpl br : brokers)
-                {
-                    int topic = 100;
-                    int noBrokers = brokers.size();
-                    int start = 0;
-                    int portion = (topic / noBrokers) + start;
-                    System.out.println(br.brokerID + " pairnei " + start + "-" + portion);
-                    start += portion;
-                }
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
-            try {
-                providerSocket.close();
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            }
-        }
+        } /*finally {
+                try {
+                    providerSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }*/
     }
 }
