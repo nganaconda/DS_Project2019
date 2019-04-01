@@ -15,6 +15,7 @@ public class SubscriberImpl implements Subscriber
     public static void main(String[] args)
     {
         new SubscriberImpl().connect();
+
     }
 
     @Override
@@ -30,7 +31,7 @@ public class SubscriberImpl implements Subscriber
             ObjectInputStream in = null;
             String message;
             try {
-                requestSocket = new Socket(InetAddress.getByName("192.168.1.11"), i+1000);
+                requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), i+1000);
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
 

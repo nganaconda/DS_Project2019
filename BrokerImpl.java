@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.*;
 import javax.xml.bind.DatatypeConverter;
@@ -19,11 +20,13 @@ public class BrokerImpl extends Thread implements Broker {
     private Socket requestSocket = null;
     private ObjectOutputStream out = null;
     private ObjectInputStream in = null;
-    public String ip = "192.168.1.11";
+    private ObjectOutputStream outS = null;
+    private ObjectInputStream inS = null;
+    public String ip = "192.168.1.6";
     public String port;
     private ServerSocket replySocket = null;
     public List<Topic> topics = new ArrayList<Topic>();
-    private static List<BrokerImpl>  broker;
+    private static List<BrokerImpl> broker;
     public int hashipport;
     public static final PublisherImpl publisher = new PublisherImpl();
     public static final SubscriberImpl subscriber = new SubscriberImpl();
@@ -40,21 +43,29 @@ public class BrokerImpl extends Thread implements Broker {
         System.out.println(this.brokerID + ": ");
         for(Topic t : this.topics)
         {
-            System.out.print(t.getBusLine() + ", ");
+            System.out.print(t.getBusLine() + " ");
         }
-        System.out.println("\n");
 
         this.acceptConnection(publisher);
         String topic = "";
         for(Topic t : this.topics)
         {
             topic += t.getBusLine();
-            topic += ",";
+            topic += " ";
         }
         this.notifyPublisher(topic);
         this.notifyPublisher("bye");
 
         this.acceptConnection(subscriber);
+        Topic topicAsked = this.getInfo();
+
+        for(Topic t : this.topics){
+            if(topicAsked.getBusLine().equals(t.getBusLine()))
+            {
+                System.out.println(this.brokerID + " EGW");
+                this.notifyPublisher(t.getBusLine());
+            }
+        }
     }
 
     public static void main(String[] args) {
@@ -102,7 +113,14 @@ public class BrokerImpl extends Thread implements Broker {
 
             for(BrokerImpl bi : broker)
             {
+                /*System.out.println("Broker " + bi.brokerID + ":");
+                for(Topic t : bi.topics)
+                {
+                    System.out.print(" " + t.getBusLine() + " ");
+                }
+                System.out.println("\n");*/
                 bi.start();
+
                 /*try
                 {
                     bi.join();
@@ -126,20 +144,20 @@ public class BrokerImpl extends Thread implements Broker {
     public void calculateKeys() {
         /*String port = Integer.toString(requestSocket.getLocalPort());
         String ip = requestSocket.getLocalAddress().toString();*/
-        port = Integer.toString(Integer.parseInt(brokerID));
-        hashipport = (ip + "/" + port).hashCode();
+        port = Integer.toString(Integer.parseInt(brokerID) + 1000);
+        hashipport = (ip + port).hashCode();
     }
 
     public void acceptConnection(Publisher pub) {
         String publisher;
         try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.1.11"), 4321);
+            requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), 4321);
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
 
             try {
                 publisher = (String) in.readObject();
-                System.out.println("Server > " + publisher);
+                System.out.println("\nServer > " + publisher);
 
                 out.writeObject("Broker with id " + brokerID + " connected.");
                 out.flush();
@@ -167,15 +185,16 @@ public class BrokerImpl extends Thread implements Broker {
         Socket connection = null;
         String message = null;
         try {
-            replySocket = new ServerSocket(Integer.parseInt(brokerID)+1000);
+            replySocket = new ServerSocket(Integer.parseInt(port));
             while(true) {
                 connection = replySocket.accept();
-                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());
 
-                out.writeObject("Broker " + brokerID + " successfully connected to Client.");
-                out.flush();
-                do {
+                outS.writeObject("Broker " + brokerID + " successfully connected to Client.");
+                outS.flush();
+                break;
+                /*do {
                     try {
                         message = (String) in.readObject();
                         System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
@@ -186,21 +205,21 @@ public class BrokerImpl extends Thread implements Broker {
                 } while (!message.equals("bye"));
                 in.close();
                 out.close();
-                connection.close();
+                connection.close();*/
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
+        } /*finally {
             try {
                 replySocket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-        }
+        }*/
     }
 
 
-    public void notifyPublisher(String msg) {
+    public void notifyPublisher(Object msg) {
         try {
             out.writeObject(msg);
             out.flush();
@@ -209,13 +228,58 @@ public class BrokerImpl extends Thread implements Broker {
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
-        if(msg.equals("bye")){
+        /*if(msg.equals("bye")){
             try {
                 in.close();
                 out.close();
                 requestSocket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
+            }
+        }*/
+    }
+
+    @Override
+    public Topic getInfo() {
+        String msg;
+        Topic topic = null;
+        while(true) {
+            try {
+                msg = (String) inS.readObject();
+                System.out.println(msg);
+                if (msg.equals("bye")) {
+                    break;
+                }
+                topic = new Topic(msg);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        /*try {
+            inS.close();
+            out.close();
+            replySocket.close();
+        }
+        catch (IOException ioException) {
+            ioException.printStackTrace();
+        }*/
+        return topic;
+    }
+
+    @Override
+    public void pull(Topic topic) {
+        HashMap<Topic, Value> topicValueHashMap;
+        while(true) {
+            try {
+                topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
+                outS.writeObject(topicValueHashMap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
         }
     }

@@ -5,7 +5,6 @@ import java.util.List;
 public interface Broker extends Node
 {
     //public List<Subscriber> registeredSubscribers;
-    //public List<Publisher> registeredPublishers;
 
     public void calculateKeys();
 
@@ -13,7 +12,9 @@ public interface Broker extends Node
 
     public void acceptConnection(Subscriber sub);
 
-    public void notifyPublisher(String msg);
+    public void notifyPublisher(Object msg);
 
-    //public void pull(Topic topic);
+    public Topic getInfo();
+
+    public void pull(Topic topic);
 }
