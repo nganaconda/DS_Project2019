@@ -41,8 +41,14 @@ public class PublisherMain2 implements Publisher {
     }
 
     @Override
-    public void disconect() {
-
+    public void disconect(Socket requestSocket, ObjectInputStream in, ObjectOutputStream out) {
+        try {
+            in.close();
+            out.close();
+            requestSocket.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
     }
 
     @Override

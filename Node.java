@@ -1,3 +1,6 @@
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.List;
 
 public interface Node {
@@ -10,7 +13,7 @@ public interface Node {
 
     public void connect();
 
-    public void disconect();
+    public void disconect(Socket requestSocket, ObjectInputStream in, ObjectOutputStream out);
 
     public void updateNodes();
 

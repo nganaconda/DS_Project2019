@@ -38,28 +38,74 @@ public class PublisherMain1 extends Thread implements Publisher {
     }
 
 
-    public void push(Topic t, Value v) {
-        tv.put(t,v);
-
-        File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
-
+    public void push(String lineCode, ServerSocket providerSocket, Socket connection, ObjectOutputStream out, int j) {
+        //File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
         try{
-            BufferedReader br1 = new BufferedReader(new FileReader(f1));
-            String line;
-            String[] myLine;
+
+            Topic t;
+            //Bus b;
+            Value v;
+
+                //for(int h=0;h<buses.size();h++) {
+                   // if(buses.get(h).getLineCode().equals(lineCode)) {
+                        //b = buses.get(h);
+                        //out.writeObject(v);
+                        if(j==1) {
+                            for(int i =0;i<topicsA.size();i++) {
+                                if(lineCode.equals(topicsA.get(i).getLineCode())) {
+                                    t = topicsA.get(i);
+                                    out.writeObject(t); // I send the LineId/Topic to the broker
+                                    for(int k =0;k<values.size();k++) {
+                                        if(values.get(k).getBus().getLineCode().equals(lineCode)) {
+                                            v = values.get(k);
+                                            out.writeObject(v); // I send the Value for the specified lineCode
+                                            tv.put(t,v);
+                                        }
+                                    }
+
+                                }
+
+                            }
+                        }else if(j==2) {
+                            for(int i =0;i<topicsB.size();i++) {
+                                if(lineCode.equals(topicsB.get(i).getLineCode())) {
+                                    t = topicsB.get(i);
+                                    out.writeObject(t); // I send the LineId/Topic to the broker
+                                    for(int k =0;k<values.size();k++) {
+                                        if(values.get(k).getBus().getLineCode().equals(lineCode)) {
+                                            v = values.get(k);
+                                            out.writeObject(v); // I send the Value for the specified lineCode
+                                            tv.put(t,v);
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
+
+                    //}
+                //}
+
+
         }catch (IOException e) {
             e.printStackTrace();
         }
 
 
-
-
-
-
     }
 
 
-    public void notifyFailure(Broker b) {
+    public void notifyFailure(ServerSocket providerSocket, Socket connection, ObjectOutputStream out) {
+
+
+
+        try {
+            out.writeObject("Publisher node not responding!!!");
+            out.flush();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -138,20 +184,27 @@ public class PublisherMain1 extends Thread implements Publisher {
     }
 
 
+
     public void connect() { // Sends data and messages to brokers.
         ServerSocket providerSocket = null;
         Socket connection = null;
         String message = null;
         try {
             providerSocket = new ServerSocket(4321); // Create new server socket
+            System.out.println("Publisher's id is: "  + this.getPublisherId());
 
-            while (true) {
+            //while (true) {
                 connection = providerSocket.accept(); // wait for connection
+
+                System.out.println("Hi");
+
                 ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
 
+
                 out.writeObject("Publisher successfully connected to Broker.");
                 out.flush();
+                push(message,providerSocket,connection,out,this.getPublisherId()); // message is the lineCode
 
                 message = (String) in.readObject();
                 System.out.println(connection.getInetAddress().getHostAddress() + ">" + message);
@@ -159,24 +212,24 @@ public class PublisherMain1 extends Thread implements Publisher {
                 //System.out.println(in.readUTF());
                 //System.out.println((Message) in.readObject());
 
-
                 do {
                     try {
 
+
+
                         message = (String) in.readObject();
                         System.out.println(connection.getInetAddress().getHostAddress() + ">" + message);
-
+                        //Thread.sleep(10000); // 10 sec
                     } catch (ClassNotFoundException classnot) {
                         System.err.println("Data received in unknown format");
                     }
                 } while (!message.equals("bye"));
 
 
-
                 in.close();
                 out.close();
                 connection.close();
-            } // while(true)
+            //} // while(true)
 
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -193,8 +246,14 @@ public class PublisherMain1 extends Thread implements Publisher {
     }
 
 
-    public void disconect() {
-
+    public void disconect(Socket requestSocket, ObjectInputStream in, ObjectOutputStream out) {
+        try {
+            in.close();
+            out.close();
+            requestSocket.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
     }
 
 
@@ -217,8 +276,10 @@ public class PublisherMain1 extends Thread implements Publisher {
             for(PublisherMain1 p: pubs) {
                 p.start();
                 try{
-                    p.join();
+                    //p.join();
                     p.init(p.getPublisherId());
+                    p.connect();
+                    System.out.println("Hi");
 
 
                 }catch (Exception e) {
@@ -296,10 +357,6 @@ public class PublisherMain1 extends Thread implements Publisher {
 
     }
 
-
-    public void openServer() {
-
-    }
 
     public int getPublisherId() {
         return publisherId;

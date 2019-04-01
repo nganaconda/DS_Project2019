@@ -44,8 +44,15 @@ public class BrokerMainTest implements Broker {
     }
 
     @Override
-    public void disconect() {
+    public void disconect(Socket requestSocket, ObjectInputStream in, ObjectOutputStream out) {
 
+        try {
+            in.close();
+            out.close();
+            requestSocket.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
     }
 
     @Override
@@ -73,32 +80,27 @@ public class BrokerMainTest implements Broker {
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
 
-            try {
-                message = (String) in.readObject();
-                System.out.println("Broker: " + message);
 
-                out.writeObject("Client successfully connected to Broker. ");
-                out.flush();
 
-                out.writeObject("bye");
-                out.flush();
+                try {
+                    message = (String) in.readObject();
+                    System.out.println("Broker: " + message);
 
-            } catch (ClassNotFoundException classNot) {
-                System.out.println("Data received in unknown format");
-            }
+                    out.writeObject("Client successfully connected to Broker. ");
+                    out.flush();
+
+                    out.writeObject("bye");
+                    out.flush();
+
+                } catch (ClassNotFoundException classNot) {
+                    System.out.println("Data received in unknown format");
+                }
+
 
         } catch (UnknownHostException unknownHost) {
             System.err.println("You are trying to connect to an unknown host!");
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
-            try {
-                in.close();
-                out.close();
-                requestSocket.close();
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
-            }
         }
     }
 

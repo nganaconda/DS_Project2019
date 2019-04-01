@@ -55,21 +55,11 @@ public class Bus {
     }
 
 
+    public String getLineCode() {
+        return lineCode;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    public void setLineCode(String lineCode) {
+        this.lineCode = lineCode;
+    }
 }
