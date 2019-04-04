@@ -26,12 +26,12 @@ public class SubscriberImpl implements Subscriber
     @Override
     public void connect()
     {
-        for(int i = 0; i < 4; i++) {
+        for(Broker b : brokers) {
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
             String message;
             try {
-                requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), i+1000);
+                requestSocket = new Socket(InetAddress.getByName("192.168.1.7"), b.getPort());
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
 

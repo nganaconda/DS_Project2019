@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface Node {
-    List<BrokerImpl> brokers = new ArrayList<BrokerImpl>() {
+    List<Broker> brokers = new ArrayList<Broker>() {
         {
-            for(int i = 0; i < 4; i++) {
-                add(new BrokerImpl(Integer.toString(i)));
-            }
+            add(new BrokerImpl1("192.168.1.7", 1000));
+            add(new BrokerImpl1("192.168.1.7", 2000));
         }
     };
 

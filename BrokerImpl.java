@@ -25,10 +25,10 @@ public class BrokerImpl extends Thread implements Broker {
     public String ip = "192.168.1.6";
     public String port;
     private ServerSocket replySocket = null;
-    public List<Topic> topics = new ArrayList<Topic>();
+    public ArrayList<Topic> topics = new ArrayList<Topic>();
     private static List<BrokerImpl> broker;
     public int hashipport;
-    public static final PublisherImpl publisher = new PublisherImpl();
+    public static final PublisherImpl publisher = new PublisherImpl("192.168.1.7", 4321);
     public static final SubscriberImpl subscriber = new SubscriberImpl();
    //public List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>();
 
@@ -67,6 +67,31 @@ public class BrokerImpl extends Thread implements Broker {
             }
         }
     }
+
+    public int getPort() {
+        return Integer.parseInt(this.port);
+    }
+
+    public String getIp() {
+        return this.ip;
+    }
+
+    public int getHashipport(){
+        return this.hashipport;
+    }
+
+    public void addTopics(Topic t){
+        this.topics.add(t);
+    }
+
+    public ArrayList<Topic> getTopics(){
+        return this.topics;
+    }
+
+    public void setTopics(ArrayList<Topic> t){
+        this.topics = t;
+    }
+
 
     public static void main(String[] args) {
         int noBrokers = Integer.parseInt(args[0]);
@@ -148,7 +173,7 @@ public class BrokerImpl extends Thread implements Broker {
         hashipport = (ip + port).hashCode();
     }
 
-    public void acceptConnection(Publisher pub) {
+    public void acceptConnection(PublisherImpl pub) {
         String publisher;
         try {
             requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), 4321);
@@ -181,7 +206,7 @@ public class BrokerImpl extends Thread implements Broker {
     }
 
 
-    public void acceptConnection(Subscriber sub) {
+    public void acceptConnection(SubscriberImpl sub) {
         Socket connection = null;
         String message = null;
         try {
