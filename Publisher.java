@@ -1,12 +1,17 @@
 package DS_as1;
 
-public interface Publisher extends Node
-{
-    //public void getBrokerList();
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 
-    //public Broker hashTopic(Topic topic);
+public interface Publisher extends Node {
 
-    //public void push(Topic topic, Value val);
+    public void getBrokerList();
 
-    //public void notifyFailure(Broker brok);
+    public void hashTopic(Topic t);
+
+    public void push(String lineCode, ServerSocket providerSocket, Socket connection, ObjectOutputStream out,int j);  // Topic t, Value v
+
+    public void notifyFailure(ServerSocket providerSocket, Socket connection, ObjectOutputStream out);
+
 }

@@ -25,12 +25,12 @@ public class BrokerImpl extends Thread implements Broker {
     public String ip = "192.168.1.6";
     public String port;
     private ServerSocket replySocket = null;
-    public ArrayList<Topic> topics = new ArrayList<Topic>();
+    public List<Topic> topics = new ArrayList<Topic>();
     private static List<BrokerImpl> broker;
     public int hashipport;
-    public static final PublisherImpl publisher = new PublisherImpl("192.168.1.7", 4321);
+    public static final PublisherImpl publisher = new PublisherImpl();
     public static final SubscriberImpl subscriber = new SubscriberImpl();
-   //public List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>();
+    //public List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>();
 
 
     public BrokerImpl(String IDnew) {
@@ -41,15 +41,13 @@ public class BrokerImpl extends Thread implements Broker {
         System.out.println("Broker with ID " + brokerID + " started.");
 
         System.out.println(this.brokerID + ": ");
-        for(Topic t : this.topics)
-        {
+        for (Topic t : this.topics) {
             System.out.print(t.getBusLine() + " ");
         }
 
         this.acceptConnection(publisher);
         String topic = "";
-        for(Topic t : this.topics)
-        {
+        for (Topic t : this.topics) {
             topic += t.getBusLine();
             topic += " ";
         }
@@ -59,48 +57,20 @@ public class BrokerImpl extends Thread implements Broker {
         this.acceptConnection(subscriber);
         Topic topicAsked = this.getInfo();
 
-        for(Topic t : this.topics){
-            if(topicAsked.getBusLine().equals(t.getBusLine()))
-            {
+        for (Topic t : this.topics) {
+            if (topicAsked.getBusLine().equals(t.getBusLine())) {
                 System.out.println(this.brokerID + " EGW");
                 this.notifyPublisher(t.getBusLine());
             }
         }
     }
 
-    public int getPort() {
-        return Integer.parseInt(this.port);
-    }
-
-    public String getIp() {
-        return this.ip;
-    }
-
-    public int getHashipport(){
-        return this.hashipport;
-    }
-
-    public void addTopics(Topic t){
-        this.topics.add(t);
-    }
-
-    public ArrayList<Topic> getTopics(){
-        return this.topics;
-    }
-
-    public void setTopics(ArrayList<Topic> t){
-        this.topics = t;
-    }
-
-
     public static void main(String[] args) {
         int noBrokers = Integer.parseInt(args[0]);
-        if(noBrokers < 1) System.out.println("You selected to start no Broker. ");
-        else
-        {
+        if (noBrokers < 1) System.out.println("You selected to start no Broker. ");
+        else {
             broker = new ArrayList<BrokerImpl>();
-            for(int i = 0; i < noBrokers; i++)
-            {
+            for (int i = 0; i < noBrokers; i++) {
                 broker.add(new BrokerImpl(Integer.toString(i)));
             }
 
@@ -130,14 +100,11 @@ public class BrokerImpl extends Thread implements Broker {
                         if (b.hashipport == nearestNode) b.topics.add(new Topic(lineCode));
                     }
                 }
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 System.out.println("Error reading busLinesNew.txt .");
             }
 
-            for(BrokerImpl bi : broker)
-            {
+            for (BrokerImpl bi : broker) {
                 /*System.out.println("Broker " + bi.brokerID + ":");
                 for(Topic t : bi.topics)
                 {
@@ -173,7 +140,7 @@ public class BrokerImpl extends Thread implements Broker {
         hashipport = (ip + port).hashCode();
     }
 
-    public void acceptConnection(PublisherImpl pub) {
+    public void acceptConnection(Publisher pub) {
         String publisher;
         try {
             requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), 4321);
@@ -206,12 +173,12 @@ public class BrokerImpl extends Thread implements Broker {
     }
 
 
-    public void acceptConnection(SubscriberImpl sub) {
+    public void acceptConnection(Subscriber sub) {
         Socket connection = null;
         String message = null;
         try {
             replySocket = new ServerSocket(Integer.parseInt(port));
-            while(true) {
+            while (true) {
                 connection = replySocket.accept();
                 outS = new ObjectOutputStream(connection.getOutputStream());
                 inS = new ObjectInputStream(connection.getInputStream());
@@ -223,7 +190,6 @@ public class BrokerImpl extends Thread implements Broker {
                     try {
                         message = (String) in.readObject();
                         System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
-
                     } catch (ClassNotFoundException classnot) {
                         System.err.println("Data received in unknown format");
                     }
@@ -268,7 +234,7 @@ public class BrokerImpl extends Thread implements Broker {
     public Topic getInfo() {
         String msg;
         Topic topic = null;
-        while(true) {
+        while (true) {
             try {
                 msg = (String) inS.readObject();
                 System.out.println(msg);
@@ -297,7 +263,7 @@ public class BrokerImpl extends Thread implements Broker {
     @Override
     public void pull(Topic topic) {
         HashMap<Topic, Value> topicValueHashMap;
-        while(true) {
+        while (true) {
             try {
                 topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
                 outS.writeObject(topicValueHashMap);

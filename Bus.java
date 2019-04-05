@@ -2,7 +2,7 @@ package DS_as1;
 
 public class Bus
 {
-    private String lineNuber;
+    private String lineNumber;
     private String routeCode;
     private String vehicleid;
     private String lineName;
