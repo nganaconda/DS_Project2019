@@ -68,6 +68,8 @@ public class BrokerImpl extends Thread implements Broker {
         }
     }
 
+    public int getID(){return 0;}
+
     public int getPort() {
         return Integer.parseInt(this.port);
     }

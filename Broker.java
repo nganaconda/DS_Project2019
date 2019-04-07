@@ -1,5 +1,6 @@
 package DS_as1;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +19,8 @@ public interface Broker extends Node
     public Topic getInfo();
 
     public void pull(Topic topic);
+
+    public int getID();
 
     public int getPort();
 

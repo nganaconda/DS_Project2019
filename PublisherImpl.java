@@ -14,6 +14,8 @@ public class PublisherImpl implements Publisher
     public int port;
     public String ip;
     private static ServerSocket providerSocket = null;
+    ObjectOutputStream out;
+    ObjectInputStream in;
 
     public PublisherImpl(String ipnew, int portnew)
     {
@@ -48,6 +50,7 @@ public class PublisherImpl implements Publisher
                 out.flush();
                 do {
                     try {
+                        //to message 8a prepei na periexei to id, to ip kai to port tou broker me ton opoio exoume anoi3ei sundesh, ola xwrismena me keno
                         message = (String) in.readObject();
                         if(message.equals("bye")){
                             break;
@@ -56,8 +59,9 @@ public class PublisherImpl implements Publisher
                         int id = Integer.parseInt(message.split(" ")[0]);
                         String ipB = message.split(" ")[1];
                         String portB = message.split(" ")[2];
-                        Broker b = new BrokerImpl1(ipB, Integer.parseInt(portB));
+                        Broker b = new BrokerImpl1(id, ipB, Integer.parseInt(portB));
 
+                        //ousiastika enhmerwnoume th lista me tous brokers me ta topics gia ta opoia einai upeu8unos o ka8enas
                         String topic = (String) in.readObject();
                         ArrayList<Topic> top = new ArrayList<Topic>();
                         for(int i = 0; i < topic.split(" ").length; i++){
@@ -76,9 +80,21 @@ public class PublisherImpl implements Publisher
                         System.err.println("Data received in unknown format");
                     }
                 } while (!message.equals("bye"));
-                in.close();
-                out.close();
-                connection.close();
+
+                //edw einai h proswrinh ekdosh ths pull giati gia twra douleuoume me strings
+                try {
+                    String newtopic = (String) in.readObject();
+                    while (!newtopic.equals("bye")) {
+                        String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
+                        out.writeObject(reply);
+                        newtopic = (String) in.readObject();
+                    }
+                    in.close();
+                    out.close();
+                    connection.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();

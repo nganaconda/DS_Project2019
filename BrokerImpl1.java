@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class BrokerImpl1 extends Thread implements Broker
+public class BrokerImpl1 extends Thread implements Broker, Serializable
 {
-    public int id = 0;
+    private int id;
     private int port;
     private String ip;
     private int hashipport;
@@ -20,6 +20,7 @@ public class BrokerImpl1 extends Thread implements Broker
     private ObjectOutputStream outS = null;
     private ObjectInputStream in = null;
     private ObjectInputStream inS = null;
+    private static Info info;
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
@@ -31,12 +32,14 @@ public class BrokerImpl1 extends Thread implements Broker
     };
 
 
-    public BrokerImpl1(String ipnew, int portnew)
+    public BrokerImpl1(int idnew, String ipnew, int portnew)
     {
+        id = idnew;
         ip = ipnew;
         port = portnew;
-        id = 0;
     }
+
+    public int getID(){return this.id;}
 
     public int getPort() {
         return this.port;
@@ -65,25 +68,52 @@ public class BrokerImpl1 extends Thread implements Broker
 
     public void run()
     {
+        //diatrexei th lista me tous publishers kai anoigei sundesh mazi tous
         for(PublisherImpl p : registeredPublishers)
         {
             this.acceptConnection(p);
+            //dhmiourgei ena string me ola ta topics tou trexonta broker kai ta stelnei ston trexonta publishers
             String topic = "";
             for(Topic t : this.topics){
                 topic += t.getBusLine();
                 topic += " ";
             }
             this.notifyPublisher(topic);
+            //to bye edw den kleinei to socket pou einai sundedemeno me ton publisher, apla einai san na tou leei den 8elw kati allo gia twra
             this.notifyPublisher("bye");
+
+            //diatrexei th lista me tous subscribers kai anoigei sundesh mazi tous
             for(SubscriberImpl s : registeredSubscribers) {
                 this.acceptConnection(s);
+                //to topicAsked einai to topic gia to opoio zhtaei plhrofories o Sub
                 Topic topicAsked = this.getInfo();
 
+                //diatrexei ola ta topics tou o trexwn broker kai an einai upeu8unos gia to topic to opoio zhtaei o sub tote enhmerwnei ton antoistoixo pub
                 for (Topic t : this.topics) {
                     if (topicAsked.getBusLine().equals(t.getBusLine())) {
                         System.out.println(this.port + " EGW");
                         this.notifyPublisher(t.getBusLine());
+                        //to katw einai h proswrinh ekdosh ths pull giati mexri twra xrhsimopoioume Strings
+                        String reply;
+                        try{
+                            reply = (String) in.readObject();
+                            outS.writeObject(reply);
+                            outS.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
                     }
+                }
+                //kleinei th sundesh me ton publisher
+                this.notifyPublisher("bye");
+                //edw to keno stelnetai ston sub etsi wste an den htan upeu8unos o trexwn broker gia to topic pou zhthse o sub na mhn perimenei o sub
+                //adika apanthsh
+                try {
+                    outS.writeObject(" ");
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
@@ -91,57 +121,8 @@ public class BrokerImpl1 extends Thread implements Broker
 
     public static void main(String[] args)
     {
-        File buslines = new File("DS_project_dataset/busLinesNew.txt");
-        for (Broker b : brokers) {
-            b.calculateKeys();
-        }
-        try {
-            FileReader fr = new FileReader(buslines);
-            BufferedReader br = new BufferedReader(fr);
-
-            String line = br.readLine();
-            String busID;
-            String lineCode;
-
-            while ((line = br.readLine()) != null) {
-                busID = line.split(",")[1];
-                lineCode = line.split(",")[0];
-
-                int hashtopic = busID.hashCode();
-                int nearestNode = Integer.MAX_VALUE;
-
-                while(true) {
-                    for (Broker b : brokers) {
-                        if (hashtopic <= b.getHashipport() && b.getHashipport() < nearestNode) {
-                            nearestNode = b.getHashipport();
-                        }
-                    }
-                    if(nearestNode == Integer.MAX_VALUE){
-                        hashtopic = brokers.get(0).getHashipport();
-                    }
-                    else{
-                        break;
-                    }
-                }
-                for (Broker b : brokers) {
-                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(lineCode));
-                }
-            }
-            for(Broker b : brokers){
-                System.out.println("Broker " + b.getPort() + ":");
-                for(Topic t : b.getTopics())
-                {
-                    System.out.print(" " + t.getBusLine() + " ");
-                }
-                System.out.println("\n");
-            }
-        }
-        catch (IOException e)
-        {
-            System.out.println("Error reading busLinesNew.txt .");
-        }
-
         BrokerImpl1 b =(BrokerImpl1) brokers.get(0);
+        b.init(0);
         b.start();
     }
 
@@ -158,8 +139,6 @@ public class BrokerImpl1 extends Thread implements Broker
             requestSocket = new Socket(pub.ip, pub.port);
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
-
-            //this.port = requestSocket.getLocalPort();
 
             try {
                 publisher = (String) in.readObject();
@@ -182,7 +161,6 @@ public class BrokerImpl1 extends Thread implements Broker
     public void acceptConnection(SubscriberImpl sub)
     {
         Socket connection = null;
-        String message = null;
         try {
             replySocket = new ServerSocket(port);
             while(true) {
@@ -192,6 +170,20 @@ public class BrokerImpl1 extends Thread implements Broker
 
                 outS.writeObject("Broker " + port + " successfully connected to Client.");
                 outS.flush();
+
+                //leei ston sub posoi einai oi brokers
+                outS.writeObject(brokers.size());
+                for(Broker b : brokers) {
+                    String message = "";
+                    //leei ston sub poion broker na enhmerwsei sth lista tou me tous brokers
+                    outS.writeObject(b.getID());
+                    for(Topic t : b.getTopics()){
+                        message += t.getBusLine();
+                        message += " ";
+                    }
+                    //leei ston sub gia poia topics einai upeu8unos o proanaferomenos broker
+                    outS.writeObject(message);
+                }
                 break;
             }
         } catch (IOException ioException) {
@@ -250,7 +242,55 @@ public class BrokerImpl1 extends Thread implements Broker
 
     @Override
     public void init(int x) {
+        File buslines = new File("DS_project_dataset/busLinesNew.txt");
+        for (Broker b : brokers) {
+            b.calculateKeys();
+        }
+        try {
+            FileReader fr = new FileReader(buslines);
+            BufferedReader br = new BufferedReader(fr);
 
+            String line = br.readLine();
+            String busID;
+            String lineCode;
+
+            while ((line = br.readLine()) != null) {
+                busID = line.split(",")[1];
+                lineCode = line.split(",")[0];
+
+                int hashtopic = busID.hashCode();
+                int nearestNode = Integer.MAX_VALUE;
+
+                while(true) {
+                    for (Broker b : brokers) {
+                        if (hashtopic <= b.getHashipport() && b.getHashipport() < nearestNode) {
+                            nearestNode = b.getHashipport();
+                        }
+                    }
+                    if(nearestNode == Integer.MAX_VALUE){
+                        hashtopic = brokers.get(0).getHashipport();
+                    }
+                    else{
+                        break;
+                    }
+                }
+                for (Broker b : brokers) {
+                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(lineCode));
+                }
+            }
+            for(Broker b : brokers){
+                System.out.println("Broker " + b.getPort() + ":");
+                for(Topic t : b.getTopics())
+                {
+                    System.out.print(" " + t.getBusLine() + " ");
+                }
+                System.out.println("\n");
+            }
+        }
+        catch (IOException e)
+        {
+            System.out.println("Error reading busLinesNew.txt .");
+        }
     }
 
     @Override
