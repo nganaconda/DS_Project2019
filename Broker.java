@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 public interface Broker extends Node {
@@ -8,13 +9,28 @@ public interface Broker extends Node {
 
     public void calculateKeys();
 
-    public Publisher acceptConnection(Publisher p);
+    public void acceptConnection(Publisher p);
 
-    public Subscriber acceptConnection(Subscriber p);
+    public void acceptConnection(SubscriberImpl p);
 
-    public  void notifyPublisher(String s);
+    public  void notifyPublisher(Object msg);
+
+    public Topic getInfo();
 
     public void pull(Topic t);
 
+    public int getPort();
+
+    public String getIp();
+
+    public int getHashipport();
+
+    public void addTopics(Topic t);
+
+    public ArrayList<Topic> getTopics();
+
+    public void setTopics(ArrayList<Topic> t);
+
+    public int getBrokerId();
 
 }

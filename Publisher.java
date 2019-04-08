@@ -8,8 +8,12 @@ public interface Publisher extends Node {
 
     public void hashTopic(Topic t);
 
-    public void push(String lineCode, ServerSocket providerSocket, Socket connection, ObjectOutputStream out,int j);  // Topic t, Value v
+    public void push(String busLineId);  // Topic t, Value v
 
-    public void notifyFailure(ServerSocket providerSocket, Socket connection, ObjectOutputStream out);
+    public void notifyFailure();
+
+    public String getIp();
+
+    public int getPort();
 
 }

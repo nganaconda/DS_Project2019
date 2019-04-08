@@ -1,50 +1,86 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
 
 public class Main {
+
+    public int port;
+    public String ip;
+    private static ServerSocket providerSocket = null;
+
+    public Main(String ipnew, int portnew)
+    {
+        ip = ipnew;
+        port = portnew;
+    }
+
 
     public static void main(String[] args) {
 
 
 
-        /*
-        int lineNumber = 1;
-        StringBuilder text = new StringBuilder();
-
-        try {
-            File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLines.txt");
-            //File f2 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositions.txt");
-            BufferedReader br = new BufferedReader(new FileReader(f1));
-            String line;
-            String[] myLine;
-
-            while((line=br.readLine()) != null) {
-                text.append(line + "\n");
-
-                myLine = line.split(",");
-                while(lineNumber<=10) {
-                    Topic t = new Topic(myLine[0],myLine[1],myLine[3]);
-                    topics.add(t);
-
-                    lineNumber++;
-                }
-
-
-
-            }
-            System.out.println("Linenumber " + lineNumber);
-            br.close();
-        }catch (IOException e) {
-            e.printStackTrace();
-        }
-        */
 
 
 
 
 
     }
+
+
+    /*
+    public void connect() {
+        Socket connection = null;
+        String message = null;
+        try {
+            providerSocket = new ServerSocket(port);
+
+            while(true) {
+                connection = providerSocket.accept();
+                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+
+                out.writeObject("Server successfully connected to Broker. ");
+                out.flush();
+                do {
+                    try {
+                        message = (String) in.readObject();
+                        if(message.equals("bye")){
+                            break;
+                        }
+                        System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
+                        int id = Integer.parseInt(message.split(" ")[0]);
+                        String ipB = message.split(" ")[1];
+                        String portB = message.split(" ")[2];
+                        Broker b = new BrokerImpl1(ipB, Integer.parseInt(portB));
+
+                        String topic = (String) in.readObject();
+                        ArrayList<Topic> top = new ArrayList<Topic>();
+                        for(int i = 0; i < topic.split(" ").length; i++){
+                            top.add(new Topic(topic.split(" ")[i]));
+                        }
+                        b.setTopics(top);
+                        brokers.set(id, b);
+                        System.out.println("Broker " + b.getPort() + ":");
+                        for(Topic t : b.getTopics())
+                        {
+                            System.out.print(t.getBusLineId() + " ");
+                        }
+                        System.out.println("\n");
+
+                    } catch (ClassNotFoundException classnot) {
+                        System.err.println("Data received in unknown format");
+                    }
+                } while (!message.equals("bye"));
+                in.close();
+                out.close();
+                connection.close();
+            }
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+    */
+
 
 }

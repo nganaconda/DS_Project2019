@@ -9,6 +9,10 @@ public class Topic {
         this.desEng = desEng;
     }
 
+    public Topic(String lineCode) {
+        this.lineCode = lineCode;
+    }
+
     public String getBusLineId() {
         return busLineId;
     }

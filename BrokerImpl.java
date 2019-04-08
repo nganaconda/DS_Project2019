@@ -1,55 +1,206 @@
-package DS_as1;
+
 import java.io.*;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.logging.*;
+import javax.xml.bind.DatatypeConverter;
 
 
 public class BrokerImpl extends Thread implements Broker {
-    public static String brokerID;
-    private static Socket requestSocket = null;
-    private static ServerSocket replySocket = null;
-    private static String hash;
 
-    public BrokerImpl(String IDnew) {
+    public int brokerID;
+    private Socket requestSocket = null;
+    private ObjectOutputStream out = null;
+    private ObjectInputStream in = null;
+    private ObjectOutputStream outS = null;
+    private ObjectInputStream inS = null;
+    public String ip = "192.168.1.6";
+    public int port;
+    private ServerSocket replySocket = null;
+    public ArrayList<Topic> topics = new ArrayList<Topic>();
+    private static List<BrokerImpl> broker;
+    public int hashipport;
+    public static final PublisherImpl1 publisher = new PublisherImpl1();
+    public static final SubscriberImpl subscriber = new SubscriberImpl();
+    //public List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>();
+
+
+    public BrokerImpl(int IDnew) {
         brokerID = IDnew;
     }
 
     public void run() {
-        System.out.println("Thread " + brokerID + " started.");
+        System.out.println("Broker with ID " + brokerID + " started.");
+
+        System.out.println(this.brokerID + ": ");
+        for(Topic t : this.topics)
+        {
+            System.out.print(t.getBusLineId() + " ");
+        }
+
+        this.acceptConnection(publisher);
+        String topic = "";
+        for(Topic t : this.topics)
+        {
+            topic += t.getBusLineId();
+            topic += " ";
+        }
+        this.notifyPublisher(topic);
+        this.notifyPublisher("bye");
+
+        this.acceptConnection(subscriber);
+        Topic topicAsked = this.getInfo();
+
+        for(Topic t : this.topics){
+            if(topicAsked.getBusLineId().equals(t.getBusLineId()))
+            {
+                System.out.println(this.brokerID + " EGW");
+                this.notifyPublisher(t.getBusLineId());
+            }
+        }
+    }
+    public int getBrokerId() {
+        return this.brokerID;
     }
 
     public static void main(String[] args) {
+        int noBrokers = Integer.parseInt(args[0]);
+        if(noBrokers < 1) System.out.println("You selected to start no Broker. ");
+        else
+        {
+            broker = new ArrayList<BrokerImpl>();
+            for(int i = 0; i < noBrokers; i++)
+            {
+                broker.add(new BrokerImpl(i));
+            }
 
+            File buslines = new File("DS_project_dataset/busLinesNew.txt");
+            try {
+                FileReader fr = new FileReader(buslines);
+                BufferedReader br = new BufferedReader(fr);
+
+                String line = br.readLine();
+                String busID;
+                String lineCode;
+
+                while ((line = br.readLine()) != null) {
+                    busID = line.split(",")[1];
+                    lineCode = line.split(",")[0];
+
+                    int hashtopic = busID.hashCode();
+                    int nearestNode = Integer.MAX_VALUE;
+
+                    for (BrokerImpl b : broker) {
+                        b.init();
+                        if (hashtopic <= b.hashipport && b.hashipport < nearestNode) {
+                            nearestNode = b.hashipport;
+                        }
+                    }
+                    for (BrokerImpl b : broker) {
+                        if (b.hashipport == nearestNode) b.topics.add(new Topic(lineCode));
+                    }
+                }
+            }
+            catch (IOException e)
+            {
+                System.out.println("Error reading busLinesNew.txt .");
+            }
+
+            for(BrokerImpl bi : broker)
+            {
+                /*System.out.println("Broker " + bi.brokerID + ":");
+                for(Topic t : bi.topics)
+                {
+                    System.out.print(" " + t.getBusLine() + " ");
+                }
+                System.out.println("\n");*/
+                bi.start();
+
+                /*try
+                {
+                    bi.join();
+                }
+                catch (Exception e)
+                {
+                    System.out.println("Interrupted Thread. ");
+                }*/
+            }
+        }
+    }
+
+    public int getPort() {
+        return this.port;
+    }
+
+    public String getIp() {
+        return this.ip;
+    }
+
+    public int getHashipport(){
+        return this.hashipport;
+    }
+
+    public void addTopics(Topic t){
+        this.topics.add(t);
+    }
+
+    public ArrayList<Topic> getTopics(){
+        return this.topics;
+    }
+
+    public void setTopics(ArrayList<Topic> t){
+        this.topics = t;
+    }
+
+    @Override
+    public void init() {
+        calculateKeys();
     }
 
     public void connect() {
     }
 
+    public void disconnect(Socket requestSocket) {
+        try {
+            in.close();
+            out.close();
+            requestSocket.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
     public void calculateKeys() {
-        String port = Integer.toString(requestSocket.getLocalPort());
-        String ip = requestSocket.getLocalAddress().toString();
-        hash = Integer.toString((ip + "/" + port).hashCode());
+        /*String port = Integer.toString(requestSocket.getLocalPort());
+        String ip = requestSocket.getLocalAddress().toString();*/
+        //port = Integer.toString(Integer.parseInt(brokerID) + 1000);
+        //port = Integer.parseInt(brokerID) + 1000;
+        //hashipport = (ip + port).hashCode();
+        String portS = Integer.toString(this.port);
+        this.hashipport = (ip + portS).hashCode()%10000 * 5;
     }
 
     public void acceptConnection(Publisher pub) {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
         String publisher;
         try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.56.1"), 4321);
+            requestSocket = new Socket(InetAddress.getByName("192.168.1.6"), 4321);
             out = new ObjectOutputStream(requestSocket.getOutputStream());
             in = new ObjectInputStream(requestSocket.getInputStream());
 
             try {
                 publisher = (String) in.readObject();
-                System.out.println("Server > " + publisher);
+                System.out.println("\nServer > " + publisher);
 
-                out.writeObject("Thread with id " + brokerID + " and hash " + hash);
+                out.writeObject("Broker with id " + brokerID + " connected.");
                 out.flush();
 
-                out.writeObject("bye");
-                out.flush();
             } catch (ClassNotFoundException classNot) {
                 System.out.println("data received in unknown format");
             }
@@ -57,7 +208,7 @@ public class BrokerImpl extends Thread implements Broker {
             System.err.println("You are trying to connect to an unknown host!");
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
+        } /*finally {
             try {
                 in.close();
                 out.close();
@@ -65,23 +216,24 @@ public class BrokerImpl extends Thread implements Broker {
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-        }
+        }*/
     }
 
 
-    public void acceptConnection(Subscriber sub) {
+    public void acceptConnection(SubscriberImpl sub) {
         Socket connection = null;
         String message = null;
         try {
-            replySocket = new ServerSocket(4324);
-            while (true) {
+            replySocket = new ServerSocket(port);
+            while(true) {
                 connection = replySocket.accept();
-                ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());
 
-                out.writeObject("Broker successfully connected to Client. ");
-                out.flush();
-                do {
+                outS.writeObject("Broker " + brokerID + " successfully connected to Client.");
+                outS.flush();
+                break;
+                /*do {
                     try {
                         message = (String) in.readObject();
                         System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
@@ -92,44 +244,82 @@ public class BrokerImpl extends Thread implements Broker {
                 } while (!message.equals("bye"));
                 in.close();
                 out.close();
-                connection.close();
+                connection.close();*/
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();
-        } finally {
+        } /*finally {
             try {
                 replySocket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-        }
+        }*/
     }
 
 
-    public void notifyPublisher(String msg) {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
+    public void notifyPublisher(Object msg) {
         try {
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            in = new ObjectInputStream(requestSocket.getInputStream());
+            out.writeObject(msg);
+            out.flush();
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+        /*if(msg.equals("bye")){
             try {
-                out.writeObject(msg);
-                out.flush();
-            } catch (UnknownHostException unknownHost) {
-                System.err.println("You are trying to connect to an unknown host!");
+                in.close();
+                out.close();
+                requestSocket.close();
             } catch (IOException ioException) {
                 ioException.printStackTrace();
-            } finally {
-                try {
-                    in.close();
-                    out.close();
-                    requestSocket.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }*/
+    }
+
+    @Override
+    public Topic getInfo() {
+        String msg;
+        Topic topic = null;
+        while(true) {
+            try {
+                msg = (String) inS.readObject();
+                System.out.println(msg);
+                if (msg.equals("bye")) {
+                    break;
+                }
+                topic = new Topic(msg);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        /*try {
+            inS.close();
+            out.close();
+            replySocket.close();
+        }
+        catch (IOException ioException) {
+            ioException.printStackTrace();
+        }*/
+        return topic;
+    }
+
+    @Override
+    public void pull(Topic topic) {
+        HashMap<Topic, Value> topicValueHashMap;
+        while(true) {
+            try {
+                topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
+                outS.writeObject(topicValueHashMap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

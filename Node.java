@@ -1,20 +1,26 @@
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 public interface Node {
 
-    public final static List<Broker> brokers = null;
+    List<Broker> brokers = new ArrayList<Broker>() {
+        {
+            add(new BrokerImpl1("192.168.1.7", 1000));
+            add(new BrokerImpl1("192.168.1.7", 2000));
+        }
+    };
 
 
 
-    public void init(int i);
+    public void init(); // int i
 
     public void connect();
 
-    public void disconect(Socket requestSocket, ObjectInputStream in, ObjectOutputStream out);
+    public void disconnect(Socket requestSocket);
 
-    public void updateNodes();
+    //public void updateNodes();
 
 }
