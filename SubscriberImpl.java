@@ -3,126 +3,164 @@ package DS_as1;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
-public class SubscriberImpl implements Subscriber {
-    private ArrayList<Info> getLines;
-
+public class SubscriberImpl implements Subscriber
+{
     private static Socket requestSocket = null;
+    private Info info;
 
-    public static void main(String[] args) {
-        new SubscriberImpl().connect();
+    public static void main(String[] args)
+    {
+        SubscriberImpl sub = new SubscriberImpl();
+        sub.connect();
+        sub.ask("821");
     }
 
-    //TODO: thn afhnw etsi pros to paron
     @Override
     public void init(int x) {
 
     }
 
     @Override
-    public void connect() {
-        ObjectOutputStream out = null;
-        ObjectInputStream in = null;
-        String message;
-        // Info line;
-        try {
-            requestSocket = new Socket(InetAddress.getByName("192.168.1.11"), 1 + 1000);
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            in = new ObjectInputStream(requestSocket.getInputStream());
-
+    public void connect()
+    {
+        for(Broker b : brokers) {
+            ObjectOutputStream out = null;
+            ObjectInputStream in = null;
+            String message;
             try {
-                message = (String) in.readObject();
-                System.out.println("Broker > " + message);
-//TODO: na balw 821 gia na einai sta8ero h na soy dinw apo eisodo gia pio meta
-                out.writeObject("THELW NA PARW TIN LISTA");
-                out.flush();
-                // Sullogh upeuthinon kleidion
-                getLines = (ArrayList<Info>) in.readObject();
+                requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                out = new ObjectOutputStream(requestSocket.getOutputStream());
+                in = new ObjectInputStream(requestSocket.getInputStream());
 
-                out.writeObject("Bye o/ ");
-                out.flush();
+                try {
+                    //to message einai ena string oti h sundesh egine epituxws
+                    //to noBrokers einai ena int gia to posoi einai oi brokers
+                    //to id einai to id tou ka8e broker pros enhmerwsh
+                    //to topic einai ena string me ola ta topic tou ka8e broker
+                    message = (String) in.readObject();
+                    int noBrokers = (int) in.readObject();
+                    int id;
+                    String topic;
+                    for(int i = 0; i < noBrokers; i++) {
+                        id = (Integer) in.readObject();
+                        topic = (String) in.readObject();
+                        ArrayList<Topic> top = new ArrayList<Topic>();
+                        for(int j = 0; j < topic.split(" ").length; j++){
+                            top.add(new Topic(topic.split(" ")[j]));
+                        }
+                        Broker bro = brokers.get(id);
+                        bro.setTopics(top);
+                        brokers.set(id, bro);
+                    }
+                    for(Broker br : brokers){
+                        System.out.println(br.getPort() + ": ");
+                        for(Topic t : br.getTopics()){
+                            System.out.print(t.getBusLine());
+                            System.out.print(" ");
+                        }
+                        System.out.println();
+                    }
 
+                    System.out.println("Broker > " + message);
 
-            } catch (ClassNotFoundException classNot) {
-                System.out.println("Data received in unknown format.");
-            }
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-            //TODO: fugei to finally kai paei sto disconnect, gia na ginetai sto telos
-        } finally {
-            try {
-                in.close();
-                out.close();
-                requestSocket.close();
+                    /*out.writeObject("821");
+                    out.flush();
+
+                    out.writeObject("bye");
+                    out.flush();
+
+                    String finalreply = (String) in.readObject();
+                    System.out.println(finalreply);*/
+                } catch (ClassNotFoundException classNot) {
+                    System.out.println("data received in unknown format");
+                }
+            } catch (UnknownHostException unknownHost) {
+                System.err.println("You are trying to connect to an unknown host!");
             } catch (IOException ioException) {
                 ioException.printStackTrace();
-            }
+            } /*finally {
+                try {
+                    in.close();
+                    out.close();
+                    requestSocket.close();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+            }*/
         }
-
     }
 
-    public void register(Topic topic) {
-        String IP, port;
-        Info broker = new Info();
-        //TODO:need taksinomisi
-        for (broker : getLines) {
-            if (broker.rensposibleLine > topic.key) {
-                IP = broker.getIP();
-                port = broker.getPort();
-            }
-        }
-        //TODO: *
-        ObjectOutputStream out = null;
+    public void ask(String line){
         ObjectInputStream in = null;
-        BusInfo message;
-        // Info line;
-        //TODO: * isws na mpoyn se sxolia epeidh den xreiazetai na sundeomai sto socket
-        try {
-            requestSocket = new Socket(InetAddress.getByName(IP), Integer.parseInt(port));
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            in = new ObjectInputStream(requestSocket.getInputStream());
-            try {
-             //   message = (String) in.readObject();
-             //   System.out.println("Broker > " + message);
+        ObjectOutputStream out = null;
+        boolean matched = false;
 
-            //    out.writeObject("Bye o/ ");
-             //   out.flush();
-                out.writeObject("THELW NA KANW REGISTER GIA TIN GRAMMI TADE");
-                out.flush();
-            message =(BusInfo) in.readObject();
-    //TODO: ti na kanw me to minima / isws h BusInfo na mhn xreiazetai 8a to doyme
-            } catch (ClassNotFoundException classNot) {
-                System.out.println("Data received in unknown format.");
+        for(Broker b : brokers){
+            for(Topic t : b.getTopics()){
+                if(t.getBusLine().equals(line)){
+                    matched = true;
+                    try {
+                        requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                        out = new ObjectOutputStream(requestSocket.getOutputStream());
+                        in = new ObjectInputStream(requestSocket.getInputStream());
+
+                        try {
+                            out.writeObject(line);
+                            out.flush();
+
+                            out.writeObject("bye");
+                            out.flush();
+
+                            String finalreply = (String) in.readObject();
+                            System.out.println(finalreply);
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } finally {
+            if(matched != true) {
+                try {
+                    requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                    out = new ObjectOutputStream(requestSocket.getOutputStream());
+                    in = new ObjectInputStream(requestSocket.getInputStream());
+                    try {
+                        out.writeObject("bye");
+                        out.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             try {
-                in.close();
-                out.close();
-                requestSocket.close();
-            } catch (IOException ioException) {
-                ioException.printStackTrace();
+                requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                out = new ObjectOutputStream(requestSocket.getOutputStream());
+                try {
+                    out.writeObject("bye");
+                    out.flush();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-
-
-    }
-
-
-    public void disconnect(Broker brok, Topic topic) {
-
-    }
-
-    public void visualiseData(Topic topic, Value val) {
-        System.out.println("");
-
     }
 }

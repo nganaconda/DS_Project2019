@@ -1,8 +1,17 @@
 package DS_as1;
-//TODO: ilopiisi
-public class Topic
-{
-    public String busLine;
 
-    public int key;
+import java.io.Serializable;
+
+public class Topic implements Serializable
+{
+    private String busLine;
+
+    public Topic(String busL)
+    {
+        busLine = busL;
+    }
+
+    public String getBusLine(){
+        return busLine;
+    }
 }

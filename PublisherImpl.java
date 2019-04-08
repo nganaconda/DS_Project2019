@@ -1,9 +1,8 @@
 package DS_as1;
 
 import com.sun.security.ntlm.Server;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,13 +11,22 @@ import java.util.List;
 
 public class PublisherImpl implements Publisher
 {
-    private static final int port = 4321;
+    public int port;
+    public String ip;
     private static ServerSocket providerSocket = null;
+    ObjectOutputStream out;
+    ObjectInputStream in;
+
+    public PublisherImpl(String ipnew, int portnew)
+    {
+        ip = ipnew;
+        port = portnew;
+    }
 
 
     public static void main(String[] args)
     {
-        new PublisherImpl().connect();
+        new PublisherImpl("192.168.1.6", 4321).connect();
     }
 
     @Override
@@ -33,7 +41,7 @@ public class PublisherImpl implements Publisher
         try {
             providerSocket = new ServerSocket(port);
 
-            while (true) {
+            while(true) {
                 connection = providerSocket.accept();
                 ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
                 ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
@@ -42,15 +50,51 @@ public class PublisherImpl implements Publisher
                 out.flush();
                 do {
                     try {
+                        //to message 8a prepei na periexei to id, to ip kai to port tou broker me ton opoio exoume anoi3ei sundesh, ola xwrismena me keno
                         message = (String) in.readObject();
+                        if(message.equals("bye")){
+                            break;
+                        }
                         System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
+                        int id = Integer.parseInt(message.split(" ")[0]);
+                        String ipB = message.split(" ")[1];
+                        String portB = message.split(" ")[2];
+                        Broker b = new BrokerImpl1(id, ipB, Integer.parseInt(portB));
+
+                        //ousiastika enhmerwnoume th lista me tous brokers me ta topics gia ta opoia einai upeu8unos o ka8enas
+                        String topic = (String) in.readObject();
+                        ArrayList<Topic> top = new ArrayList<Topic>();
+                        for(int i = 0; i < topic.split(" ").length; i++){
+                            top.add(new Topic(topic.split(" ")[i]));
+                        }
+                        b.setTopics(top);
+                        brokers.set(id, b);
+                        System.out.println("Broker " + b.getPort() + ":");
+                        for(Topic t : b.getTopics())
+                        {
+                            System.out.print(t.getBusLine() + " ");
+                        }
+                        System.out.println("\n");
+
                     } catch (ClassNotFoundException classnot) {
                         System.err.println("Data received in unknown format");
                     }
-                } while (!message.equals("bye"));
-                in.close();
-                out.close();
-                connection.close();
+                } while (true);
+
+                //edw einai h proswrinh ekdosh ths pull giati gia twra douleuoume me strings
+                try {
+                    String newtopic = (String) in.readObject();
+                    while (!newtopic.equals("bye")) {
+                        String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
+                        out.writeObject(reply);
+                        newtopic = (String) in.readObject();
+                    }
+                    in.close();
+                    out.close();
+                    connection.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();
@@ -61,25 +105,5 @@ public class PublisherImpl implements Publisher
                     ioException.printStackTrace();
                 }
             }*/
-    }
-
-    @Override
-    public void getBrokerList() {
-
-    }
-
-    @Override
-    public void hashTopic(Topic t) {
-
-    }
-
-    @Override
-    public void push(String lineCode, ServerSocket providerSocket, Socket connection, ObjectOutputStream out, int j) {
-
-    }
-
-    @Override
-    public void notifyFailure(ServerSocket providerSocket, Socket connection, ObjectOutputStream out) {
-
     }
 }
