@@ -16,7 +16,9 @@ public class SubscriberImpl implements Subscriber
 
     public static void main(String[] args)
     {
-        new SubscriberImpl().connect();
+        SubscriberImpl sub = new SubscriberImpl();
+        sub.connect();
+        sub.ask("821");
     }
 
     @Override
@@ -32,7 +34,7 @@ public class SubscriberImpl implements Subscriber
             ObjectInputStream in = null;
             String message;
             try {
-                requestSocket = new Socket(InetAddress.getByName("192.168.1.7"), b.getPort());
+                requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
                 in = new ObjectInputStream(requestSocket.getInputStream());
 
@@ -67,14 +69,14 @@ public class SubscriberImpl implements Subscriber
 
                     System.out.println("Broker > " + message);
 
-                    out.writeObject("821");
+                    /*out.writeObject("821");
                     out.flush();
 
                     out.writeObject("bye");
                     out.flush();
 
                     String finalreply = (String) in.readObject();
-                    System.out.println(finalreply);
+                    System.out.println(finalreply);*/
                 } catch (ClassNotFoundException classNot) {
                     System.out.println("data received in unknown format");
                 }
@@ -82,7 +84,7 @@ public class SubscriberImpl implements Subscriber
                 System.err.println("You are trying to connect to an unknown host!");
             } catch (IOException ioException) {
                 ioException.printStackTrace();
-            } finally {
+            } /*finally {
                 try {
                     in.close();
                     out.close();
@@ -90,6 +92,74 @@ public class SubscriberImpl implements Subscriber
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
                 }
+            }*/
+        }
+    }
+
+    public void ask(String line){
+        ObjectInputStream in = null;
+        ObjectOutputStream out = null;
+        boolean matched = false;
+
+        for(Broker b : brokers){
+            for(Topic t : b.getTopics()){
+                if(t.getBusLine().equals(line)){
+                    matched = true;
+                    try {
+                        requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                        out = new ObjectOutputStream(requestSocket.getOutputStream());
+                        in = new ObjectInputStream(requestSocket.getInputStream());
+
+                        try {
+                            out.writeObject(line);
+                            out.flush();
+
+                            out.writeObject("bye");
+                            out.flush();
+
+                            String finalreply = (String) in.readObject();
+                            System.out.println(finalreply);
+                        } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            if(matched != true) {
+                try {
+                    requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                    out = new ObjectOutputStream(requestSocket.getOutputStream());
+                    in = new ObjectInputStream(requestSocket.getInputStream());
+                    try {
+                        out.writeObject("bye");
+                        out.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                out = new ObjectOutputStream(requestSocket.getOutputStream());
+                try {
+                    out.writeObject("bye");
+                    out.flush();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }

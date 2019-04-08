@@ -26,7 +26,7 @@ public class PublisherImpl implements Publisher
 
     public static void main(String[] args)
     {
-        new PublisherImpl("192.168.1.7", 4321).connect();
+        new PublisherImpl("192.168.1.6", 4321).connect();
     }
 
     @Override
@@ -79,7 +79,7 @@ public class PublisherImpl implements Publisher
                     } catch (ClassNotFoundException classnot) {
                         System.err.println("Data received in unknown format");
                     }
-                } while (!message.equals("bye"));
+                } while (true);
 
                 //edw einai h proswrinh ekdosh ths pull giati gia twra douleuoume me strings
                 try {

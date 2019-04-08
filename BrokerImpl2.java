@@ -24,7 +24,7 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
-        {add(new PublisherImpl("192.168.1.7", 4321));}
+        {add(new PublisherImpl("192.168.1.6", 4321));}
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
@@ -69,25 +69,28 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public void run()
     {
         //diatrexei th lista me tous publishers kai anoigei sundesh mazi tous
-        for(PublisherImpl p : registeredPublishers)
-        {
+        for(PublisherImpl p : registeredPublishers) {
             this.acceptConnection(p);
             //dhmiourgei ena string me ola ta topics tou trexonta broker kai ta stelnei ston trexonta publishers
             String topic = "";
-            for(Topic t : this.topics){
+            for (Topic t : this.topics) {
                 topic += t.getBusLine();
                 topic += " ";
             }
             this.notifyPublisher(topic);
             //to bye edw den kleinei to socket pou einai sundedemeno me ton publisher, apla einai san na tou leei den 8elw kati allo gia twra
             this.notifyPublisher("bye");
+        }
 
-            //diatrexei th lista me tous subscribers kai anoigei sundesh mazi tous
-            for(SubscriberImpl s : registeredSubscribers) {
-                this.acceptConnection(s);
-                //to topicAsked einai to topic gia to opoio zhtaei plhrofories o Sub
-                Topic topicAsked = this.getInfo();
+        //diatrexei th lista me tous subscribers kai anoigei sundesh mazi tous
+        for (SubscriberImpl s : registeredSubscribers) {
+            this.acceptConnection(s);
+        }
 
+        while(true) {
+            //to topicAsked einai to topic gia to opoio zhtaei plhrofories o Sub
+            Topic topicAsked = this.getInfo();
+            if (!(topicAsked == null)) {
                 //diatrexei ola ta topics tou o trexwn broker kai an einai upeu8unos gia to topic to opoio zhtaei o sub tote enhmerwnei ton antoistoixo pub
                 for (Topic t : this.topics) {
                     if (topicAsked.getBusLine().equals(t.getBusLine())) {
@@ -95,7 +98,7 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
                         this.notifyPublisher(t.getBusLine());
                         //to katw einai h proswrinh ekdosh ths pull giati mexri twra xrhsimopoioume Strings
                         String reply;
-                        try{
+                        try {
                             reply = (String) in.readObject();
                             outS.writeObject(reply);
                             outS.flush();
@@ -106,15 +109,20 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
                         }
                     }
                 }
-                //kleinei th sundesh me ton publisher
-                this.notifyPublisher("bye");
-                //edw to keno stelnetai ston sub etsi wste an den htan upeu8unos o trexwn broker gia to topic pou zhthse o sub na mhn perimenei o sub
-                //adika apanthsh
-                try {
-                    outS.writeObject(" ");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            }
+            else break;
+        }
+        for(PublisherImpl p : registeredPublishers){
+            //kleinei th sundesh me ton publisher
+            this.notifyPublisher("bye");
+        }
+        for(SubscriberImpl s : registeredSubscribers){
+            //edw to keno stelnetai ston sub etsi wste an den htan upeu8unos o trexwn broker gia to topic pou zhthse o sub na mhn perimenei o sub
+            //adika apanthsh
+            try {
+                outS.writeObject(" ");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -207,20 +215,22 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public Topic getInfo() {
         String msg;
         Topic topic = null;
-        while(true) {
-            try {
-                msg = (String) inS.readObject();
-                System.out.println(msg);
-                if (msg.equals("bye")) {
-                    break;
-                }
-                topic = new Topic(msg);
+        try {
+            Socket connection = replySocket.accept();
+            outS = new ObjectOutputStream(connection.getOutputStream());
+            inS = new ObjectInputStream(connection.getInputStream());
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+            msg = (String) inS.readObject();
+            System.out.println(msg);
+            if (msg.equals("bye")) {
+                return null;
             }
+            topic = new Topic(msg);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
         return topic;
     }
