@@ -9,17 +9,25 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-public class SubscriberImpl implements Subscriber
-{
-    private static Socket requestSocket = null;
+public class SubscriberImpl implements Subscriber {
+    public int port;
+    public String ip;
+    public Socket requestSocket;
+    public boolean registered = false;
     private Info info;
 
-    public static void main(String[] args)
-    {
-        SubscriberImpl sub = new SubscriberImpl();
+    public SubscriberImpl(String ipnew, int portnew) {
+        ip = ipnew;
+        port = portnew;
+        requestSocket = null;
+    }
+
+    public static void main(String[] args) {
+        SubscriberImpl sub = new SubscriberImpl("192.168.1.8", 1234);
         sub.connect();
         sub.ask("821");
     }
+
 
     @Override
     public void init(int x) {
@@ -27,9 +35,8 @@ public class SubscriberImpl implements Subscriber
     }
 
     @Override
-    public void connect()
-    {
-        for(Broker b : brokers) {
+    public void connect() {
+        for (Broker b : brokers) {
             ObjectOutputStream out = null;
             ObjectInputStream in = null;
             String message;
@@ -47,20 +54,20 @@ public class SubscriberImpl implements Subscriber
                     int noBrokers = (int) in.readObject();
                     int id;
                     String topic;
-                    for(int i = 0; i < noBrokers; i++) {
+                    for (int i = 0; i < noBrokers; i++) {
                         id = (Integer) in.readObject();
                         topic = (String) in.readObject();
                         ArrayList<Topic> top = new ArrayList<Topic>();
-                        for(int j = 0; j < topic.split(" ").length; j++){
+                        for (int j = 0; j < topic.split(" ").length; j++) {
                             top.add(new Topic(topic.split(" ")[j]));
                         }
                         Broker bro = brokers.get(id);
                         bro.setTopics(top);
                         brokers.set(id, bro);
                     }
-                    for(Broker br : brokers){
+                    for (Broker br : brokers) {
                         System.out.println(br.getPort() + ": ");
-                        for(Topic t : br.getTopics()){
+                        for (Topic t : br.getTopics()) {
                             System.out.print(t.getBusLine());
                             System.out.print(" ");
                         }
@@ -96,69 +103,41 @@ public class SubscriberImpl implements Subscriber
         }
     }
 
-    public void ask(String line){
+    public void ask(String line) {
         ObjectInputStream in = null;
         ObjectOutputStream out = null;
         boolean matched = false;
 
-        for(Broker b : brokers){
-            for(Topic t : b.getTopics()){
-                if(t.getBusLine().equals(line)){
-                    matched = true;
-                    try {
-                        requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
-                        out = new ObjectOutputStream(requestSocket.getOutputStream());
-                        in = new ObjectInputStream(requestSocket.getInputStream());
-
-                        try {
-                            out.writeObject(line);
-                            out.flush();
-
-                            out.writeObject("bye");
-                            out.flush();
-
-                            String finalreply = (String) in.readObject();
-                            System.out.println(finalreply);
-                        } catch (ClassNotFoundException e) {
-                            e.printStackTrace();
-                        }
-                    } catch (UnknownHostException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            if(matched != true) {
-                try {
-                    requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
-                    out = new ObjectOutputStream(requestSocket.getOutputStream());
-                    in = new ObjectInputStream(requestSocket.getInputStream());
-                    try {
-                        out.writeObject("bye");
-                        out.flush();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        for (Broker b : brokers) {
             try {
                 requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
                 out = new ObjectOutputStream(requestSocket.getOutputStream());
-                try {
+                in = new ObjectInputStream(requestSocket.getInputStream());
+                for (Topic t : b.getTopics()) {
+                    if (t.getBusLine().equals(line)) {
+                        matched = true;
+                        out.writeObject(line);
+                        out.flush();
+
+                        out.writeObject("bye");
+                        out.flush();
+
+                        String finalreply = (String) in.readObject();
+                        System.out.println(finalreply);
+                    }
+                }
+                if (matched != true) {
                     out.writeObject("bye");
                     out.flush();
+
                 }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } catch (UnknownHostException e) {
+                out.writeObject("bye");
+                out.flush();
+            }
+            catch (IOException e) {
                 e.printStackTrace();
-            } catch (IOException e) {
+            }
+            catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
         }
