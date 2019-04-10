@@ -21,6 +21,7 @@ public class PublisherImpl extends Thread implements Publisher
     private ArrayList<Bus> buses = new ArrayList<>();
     private ArrayList<Value> values = new ArrayList<>();
     private ArrayList<Topic> topics = new ArrayList<>();
+    private static ArrayList<PublisherImpl> publishers = new ArrayList<PublisherImpl>();
 
     public PublisherImpl(String ipnew, int portnew, int idnew)
     {
@@ -43,7 +44,10 @@ public class PublisherImpl extends Thread implements Publisher
         }
         else{
             for(int i = 0; i < numOfPubs; i++) {
-                new PublisherImpl("192.168.1.6", 4321+i, i).start();
+                publishers.add(new PublisherImpl("192.168.1.6", 4321+i, i));
+            }
+            for(PublisherImpl p : publishers){
+                p.start();
             }
         }
     }
@@ -110,7 +114,7 @@ public class PublisherImpl extends Thread implements Publisher
                         connection = providerSocket.accept();
                         out = new ObjectOutputStream(connection.getOutputStream());
                         in = new ObjectInputStream(connection.getInputStream());
-                        String newtopic = (String) in.readObject();
+                        Topic newtopic = (Topic) in.readObject();
                         String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
                         out.writeObject(reply);
 

@@ -23,7 +23,7 @@ public class SubscriberImpl implements Subscriber {
     }
 
     public static void main(String[] args) {
-        SubscriberImpl sub = new SubscriberImpl("192.168.1.8", 1234);
+        SubscriberImpl sub = new SubscriberImpl("192.168.1.6", 1234);
         sub.connect();
         sub.ask("821");
     }
@@ -53,14 +53,12 @@ public class SubscriberImpl implements Subscriber {
                     message = (String) in.readObject();
                     int noBrokers = (int) in.readObject();
                     int id;
-                    String topic;
+                    Info<Topic> topic = new Info<>();
                     for (int i = 0; i < noBrokers; i++) {
                         id = (Integer) in.readObject();
-                        topic = (String) in.readObject();
+                        topic = (Info<Topic>) in.readObject();
                         ArrayList<Topic> top = new ArrayList<Topic>();
-                        for (int j = 0; j < topic.split(" ").length; j++) {
-                            top.add(new Topic(topic.split(" ")[j]));
-                        }
+                        top = topic;
                         Broker bro = brokers.get(id);
                         bro.setTopics(top);
                         brokers.set(id, bro);
@@ -106,33 +104,22 @@ public class SubscriberImpl implements Subscriber {
     public void ask(String line) {
         ObjectInputStream in = null;
         ObjectOutputStream out = null;
-        boolean matched = false;
 
         for (Broker b : brokers) {
             try {
-                requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
-                out = new ObjectOutputStream(requestSocket.getOutputStream());
-                in = new ObjectInputStream(requestSocket.getInputStream());
                 for (Topic t : b.getTopics()) {
                     if (t.getBusLine().equals(line)) {
-                        matched = true;
-                        out.writeObject(line);
-                        out.flush();
+                        requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
+                        out = new ObjectOutputStream(requestSocket.getOutputStream());
+                        in = new ObjectInputStream(requestSocket.getInputStream());
 
-                        out.writeObject("bye");
+                        out.writeObject(line);
                         out.flush();
 
                         String finalreply = (String) in.readObject();
                         System.out.println(finalreply);
                     }
                 }
-                if (matched != true) {
-                    out.writeObject("bye");
-                    out.flush();
-
-                }
-                out.writeObject("bye");
-                out.flush();
             }
             catch (IOException e) {
                 e.printStackTrace();

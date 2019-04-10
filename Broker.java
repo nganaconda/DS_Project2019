@@ -15,8 +15,6 @@ public interface Broker extends Node
 
     public void acceptConnection(SubscriberImpl sub);
 
-    public void notifyPublisher(PublisherImpl pub, Object msg);
-
     public void notifyPublisher(Object msg);
 
     public Topic getInfo();
