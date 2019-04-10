@@ -9,7 +9,7 @@ public interface Broker extends Node {
 
     public void calculateKeys();
 
-    public void acceptConnection(Publisher p);
+    public void acceptConnection(PublisherImpl1 p);
 
     public void acceptConnection(SubscriberImpl p);
 

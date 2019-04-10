@@ -8,14 +8,14 @@ public interface Node {
 
     List<Broker> brokers = new ArrayList<Broker>() {
         {
-            add(new BrokerImpl1("192.168.1.7", 1000));
-            add(new BrokerImpl1("192.168.1.7", 2000));
+            add(new BrokerImpl1(0,"192.168.56.1", 1000));
+            add(new BrokerImpl1(0,"192.168.56.1", 2000));
         }
     };
 
 
 
-    public void init(); // int i
+    public void init(int i); // int i
 
     public void connect();
 

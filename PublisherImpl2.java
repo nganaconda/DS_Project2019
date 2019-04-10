@@ -19,6 +19,7 @@ public class PublisherImpl2 extends Thread implements Publisher {
     private String ip;
     private int port;
     private ServerSocket s = null;
+    private Socket socket;
 
 
     public PublisherImpl2(int publisherId) {
@@ -31,6 +32,7 @@ public class PublisherImpl2 extends Thread implements Publisher {
         port = portnew;
     }
 
+    /*
     @Override
     public void getBrokerList() {
 
@@ -40,10 +42,11 @@ public class PublisherImpl2 extends Thread implements Publisher {
     public void hashTopic(Topic t) {
         //return null;
     }
+    */
 
     public void run() { // MUST SEE
         // publisher.start()
-        init();
+        init(0);
         connect();
 
     }
@@ -95,7 +98,7 @@ public class PublisherImpl2 extends Thread implements Publisher {
 
 
     @Override
-    public void init() {
+    public void init(int i) {
         int lineNumber = 1;
         StringBuilder text = new StringBuilder();
 
@@ -119,7 +122,8 @@ public class PublisherImpl2 extends Thread implements Publisher {
                 myLine = line.split(",");
                 if(lineNumber==11) {
                     System.out.println("myLine " + myLine[0]);
-                    Topic t = new Topic(myLine[0],myLine[1],myLine[2]);topicsB.add(t);
+                    Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
+                    topicsB.add(t);
                 }
                 while(lineNumber>=11 && (line=br1.readLine()) != null) {
                     text.append(line + "\n");
@@ -187,7 +191,7 @@ public class PublisherImpl2 extends Thread implements Publisher {
                     String ipB = message.split(" ")[1];
                     String portB = message.split(" ")[2];
 
-                    Broker br = new BrokerImpl1(ipB, Integer.parseInt(portB)); // substitutes an already existed broker
+                    Broker br = new BrokerImpl1(id, ipB, Integer.parseInt(portB)); // substitutes an already existed broker
 
                     String topic = (String) in.readObject(); // I get the topic
                     // topic: the topic that the broker is responsible for
@@ -367,4 +371,7 @@ public class PublisherImpl2 extends Thread implements Publisher {
     }
 
 
+    public Socket getSocket() {
+        return socket;
+    }
 }

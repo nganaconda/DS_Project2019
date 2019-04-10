@@ -23,6 +23,7 @@ public class PublisherImpl1 extends Thread implements Publisher {
     private String ip;
     private int port;
     private ServerSocket s = null;
+    public Socket socket;
 
 
     public PublisherImpl1(int publisherId) {
@@ -53,7 +54,7 @@ public class PublisherImpl1 extends Thread implements Publisher {
 
     public void run() { // MUST SEE
         // publisher.start()
-        init();
+        init(0);
         connect();
 
     }
@@ -100,7 +101,7 @@ public class PublisherImpl1 extends Thread implements Publisher {
     }
 
 
-    public void init() {
+    public void init(int i) {
 
         int lineNumber = 1;
         StringBuilder text = new StringBuilder();
@@ -176,7 +177,7 @@ public class PublisherImpl1 extends Thread implements Publisher {
                     String ipB = message.split(" ")[1];
                     String portB = message.split(" ")[2];
 
-                    Broker br = new BrokerImpl1(ipB, Integer.parseInt(portB)); // substitutes an already existed broker
+                    Broker br = new BrokerImpl1(id, ipB, Integer.parseInt(portB)); // substitutes an already existed broker
 
                     String topic = (String) in.readObject(); // I get the topic
                                                              // topic: the topic that the broker is responsible for
@@ -389,4 +390,7 @@ public class PublisherImpl1 extends Thread implements Publisher {
     }
 
 
+//    public Socket getSocket() {
+//        return socket;
+//    }
 }

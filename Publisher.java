@@ -4,9 +4,9 @@ import java.net.Socket;
 
 public interface Publisher extends Node {
 
-    public void getBrokerList();
+    //public void getBrokerList();
 
-    public void hashTopic(Topic t);
+    //public void hashTopic(Topic t);
 
     public void push(String busLineId);  // Topic t, Value v
 
@@ -15,5 +15,7 @@ public interface Publisher extends Node {
     public String getIp();
 
     public int getPort();
+
+    //public Socket getSocket();
 
 }

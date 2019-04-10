@@ -27,15 +27,16 @@ public class BrokerImpl2 extends Thread implements Broker
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
-        {add(new SubscriberImpl());}
+        //{add(new SubscriberImpl());}
     };
 
 
-    public BrokerImpl2(String ipnew, int portnew)
+    public BrokerImpl2(int idnew, String ipnew, int portnew)
     {
+        id = idnew;
         ip = ipnew;
         port = portnew;
-        id = 0;
+        requestSocket = null;
     }
 
     public int getPort() {
@@ -66,34 +67,232 @@ public class BrokerImpl2 extends Thread implements Broker
         return this.id;
     }
 
-    public void run()
-    {
-        for(PublisherImpl1 p : registeredPublishers)
-        {
+    public void run() {
+        //diatrexei th lista me tous publishers kai anoigei sundesh mazi tous
+        for(PublisherImpl1 p : registeredPublishers) {
             this.acceptConnection(p);
+            //dhmiourgei ena string me ola ta topics tou trexonta broker kai ta stelnei ston trexonta publishers
             String topic = "";
-            for(Topic t : this.topics){
+            for (Topic t : this.topics) {
                 topic += t.getBusLineId();
                 topic += " ";
             }
             this.notifyPublisher(topic);
-            this.notifyPublisher("bye");
-            for(SubscriberImpl s : registeredSubscribers) {
-                this.acceptConnection(s);
-                Topic topicAsked = this.getInfo();
+                /*//to bye edw den kleinei to socket pou einai sundedemeno me ton publisher, apla einai san na tou leei den 8elw kati allo gia twra
+                this.notifyPublisher("bye");*/
+        }
 
+        boolean allregistered = false;
+        //diatrexei th lista me tous subscribers kai anoigei sundesh mazi tous
+        for(int i = 0; i < 1; i++){
+            SubscriberImpl s = null;
+            this.acceptConnection(s);
+        }
+
+        while(true) {
+            //to topicAsked einai to topic gia to opoio zhtaei plhrofories o Sub
+            try{
+                Socket connection = replySocket.accept();
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Topic topicAsked = this.getInfo();
+            if (!(topicAsked == null)) {
+                //diatrexei ola ta topics tou o trexwn broker kai an einai upeu8unos gia to topic to opoio zhtaei o sub tote enhmerwnei ton antoistoixo pub
                 for (Topic t : this.topics) {
                     if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
                         System.out.println(this.port + " EGW");
-                        this.notifyPublisher(t.getBusLineId());
+                        for(PublisherImpl1 pub : registeredPublishers) {
+                            try {
+                                requestSocket = new Socket(pub.getIp(), pub.getPort());
+                                in = new ObjectInputStream(requestSocket.getInputStream());
+                                out = new ObjectOutputStream(requestSocket.getOutputStream());
+                            }
+                            catch (IOException e){
+                                e.printStackTrace();
+                            }
+                            this.notifyPublisher(t.getBusLineId());
+                            //to katw einai h proswrinh ekdosh ths pull giati mexri twra xrhsimopoioume Strings
+                            String reply;
+                            try {
+                                reply = (String) in.readObject();
+                                outS.writeObject(reply);
+                                outS.flush();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
                 }
+            }
+            else break;
+        }
+        for(PublisherImpl1 p : registeredPublishers){
+            //kleinei th sundesh me ton publisher
+            try {
+                requestSocket = new Socket(p.getIp(), p.getPort());
+                in = new ObjectInputStream(requestSocket.getInputStream());
+                out = new ObjectOutputStream(requestSocket.getOutputStream());
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+            this.notifyPublisher( "bye");
+        }
+        for(SubscriberImpl s : registeredSubscribers){
+            //edw to keno stelnetai ston sub etsi wste an den htan upeu8unos o trexwn broker gia to topic pou zhthse o sub na mhn perimenei o sub
+            //adika apanthsh
+            try {
+                Socket connection = s.requestSocket;
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());
+                outS.writeObject(" ");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
+        BrokerImpl1 b =(BrokerImpl1) brokers.get(1);
+        b.init(0);
+        b.start();
+    }
+
+    @Override
+    public void calculateKeys() {
+        String portS = Integer.toString(this.port);
+        this.hashipport = (ip + portS).hashCode()%10000 * 5;
+    }
+
+    @Override
+    public void acceptConnection(PublisherImpl1 pub) {
+        String publisher;
+        try {
+            requestSocket = new Socket(pub.getIp(), pub.getPort());
+            out = new ObjectOutputStream(requestSocket.getOutputStream());
+            in = new ObjectInputStream(requestSocket.getInputStream());
+            pub.socket = requestSocket;
+            for(Publisher p : registeredPublishers){
+                if(p.getPort() == pub.getPort() && p.getIp().equals(pub.getIp())){
+                    registeredPublishers.set(registeredPublishers.indexOf(p), pub);
+                }
+            }
+
+            try {
+                publisher = (String) in.readObject();
+                System.out.println("\nServer > " + publisher);
+
+                out.writeObject(id + " " + ip + " " + port);
+                out.flush();
+
+            } catch (ClassNotFoundException classNot) {
+                System.out.println("data received in unknown format");
+            }
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    @Override
+    public void acceptConnection(SubscriberImpl sub) {
+        Socket connection = null;
+        try {
+            replySocket = new ServerSocket(port);
+            while(true) {
+                connection = replySocket.accept();
+                String ipS = connection.getInetAddress().getHostAddress();
+                int portS = connection.getPort();
+                sub = new SubscriberImpl(ipS, portS);
+                sub.requestSocket = connection;
+                sub.registered = true;
+                registeredSubscribers.add(sub);
+
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());
+
+                outS.writeObject("Broker " + port + " successfully connected to Client.");
+                outS.flush();
+
+                //leei ston sub posoi einai oi brokers
+                outS.writeObject(brokers.size());
+                for(Broker b : brokers) {
+                    String message = "";
+                    //leei ston sub poion broker na enhmerwsei sth lista tou me tous brokers
+                    outS.writeObject(b.getBrokerId());
+                    for(Topic t : b.getTopics()){
+                        message += t.getBusLineId();
+                        message += " ";
+                    }
+                    //leei ston sub gia poia topics einai upeu8unos o proanaferomenos broker
+                    outS.writeObject(message);
+                }
+                break;
+            }
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    @Override
+    public void notifyPublisher(Object msg) {
+        try {
+            out.writeObject(msg);
+            out.flush();
+        } catch (UnknownHostException unknownHost) {
+            System.err.println("You are trying to connect to an unknown host!");
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    @Override
+    public Topic getInfo() {
+        String msg;
+        Topic topic = null;
+        try {
+                /*Socket connection = replySocket.accept();
+                outS = new ObjectOutputStream(connection.getOutputStream());
+                inS = new ObjectInputStream(connection.getInputStream());*/
+
+            msg = (String) inS.readObject();
+            System.out.println(msg);
+            if (msg.equals("bye")) {
+                return null;
+            }
+            topic = new Topic(msg);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return topic;
+    }
+
+    @Override
+    public void pull(Topic topic) {
+        HashMap<Topic, Value> topicValueHashMap;
+        while(true) {
+            try {
+                topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
+                outS.writeObject(topicValueHashMap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void init(int i) {
         File buslines = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLinesNew.txt");
         for (Broker b : brokers) {
             b.calculateKeys();
@@ -143,117 +342,6 @@ public class BrokerImpl2 extends Thread implements Broker
         {
             System.out.println("Error reading busLinesNew.txt .");
         }
-
-        BrokerImpl1 b =(BrokerImpl1) brokers.get(1);
-        b.start();
-    }
-
-    @Override
-    public void calculateKeys() {
-        String portS = Integer.toString(this.port);
-        this.hashipport = (ip + portS).hashCode()%10000 * 5;
-    }
-
-    @Override
-    public void acceptConnection(Publisher pub) {
-        String publisher;
-        try {
-            requestSocket = new Socket(pub.getIp(), pub.getPort());
-            out = new ObjectOutputStream(requestSocket.getOutputStream());
-            in = new ObjectInputStream(requestSocket.getInputStream());
-
-            //this.port = requestSocket.getLocalPort();
-
-            try {
-                publisher = (String) in.readObject();
-                System.out.println("\nServer > " + publisher);
-
-                out.writeObject(id + " " + ip + " " + port);
-                out.flush();
-
-            } catch (ClassNotFoundException classNot) {
-                System.out.println("data received in unknown format");
-            }
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-    }
-
-    @Override
-    public void acceptConnection(SubscriberImpl sub)
-    {
-        Socket connection = null;
-        String message = null;
-        try {
-            replySocket = new ServerSocket(port);
-            while(true) {
-                connection = replySocket.accept();
-                outS = new ObjectOutputStream(connection.getOutputStream());
-                inS = new ObjectInputStream(connection.getInputStream());
-
-                outS.writeObject("Broker " + port + " successfully connected to Client.");
-                outS.flush();
-                break;
-            }
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-    }
-
-    @Override
-    public void notifyPublisher(Object msg) {
-        try {
-            out.writeObject(msg);
-            out.flush();
-        } catch (UnknownHostException unknownHost) {
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-    }
-
-    @Override
-    public Topic getInfo() {
-        String msg;
-        Topic topic = null;
-        while(true) {
-            try {
-                msg = (String) inS.readObject();
-                System.out.println(msg);
-                if (msg.equals("bye")) {
-                    break;
-                }
-                topic = new Topic(msg);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-        return topic;
-    }
-
-    @Override
-    public void pull(Topic topic) {
-        HashMap<Topic, Value> topicValueHashMap;
-        while(true) {
-            try {
-                topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
-                outS.writeObject(topicValueHashMap);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    @Override
-    public void init() {
-
     }
 
     @Override
