@@ -9,25 +9,43 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class PublisherImpl implements Publisher
+public class PublisherImpl extends Thread implements Publisher
 {
     public int port;
     public String ip;
+    private int id;
     private ServerSocket providerSocket = null;
     public Socket socket;
     ObjectOutputStream out;
     ObjectInputStream in;
+    private ArrayList<Bus> buses = new ArrayList<>();
+    private ArrayList<Value> values = new ArrayList<>();
+    private ArrayList<Topic> topics = new ArrayList<>();
 
-    public PublisherImpl(String ipnew, int portnew)
+    public PublisherImpl(String ipnew, int portnew, int idnew)
     {
         ip = ipnew;
         port = portnew;
+        id = idnew;
+    }
+
+    public void run(){
+        this.connect();
     }
 
 
     public static void main(String[] args)
     {
-        new PublisherImpl("192.168.1.8", 4321).connect();
+        //new PublisherImpl("192.168.1.6", 4321).connect();
+        int numOfPubs = Integer.parseInt(args[0]);
+        if(numOfPubs == 0){
+            System.out.println("You have chosen to run no Publishers. ");
+        }
+        else{
+            for(int i = 0; i < numOfPubs; i++) {
+                new PublisherImpl("192.168.1.6", 4321+i, i).start();
+            }
+        }
     }
 
     @Override
@@ -48,7 +66,7 @@ public class PublisherImpl implements Publisher
                         out = new ObjectOutputStream(connection.getOutputStream());
                         in = new ObjectInputStream(connection.getInputStream());
 
-                        out.writeObject("Server successfully connected to Broker. ");
+                        out.writeObject("Server " + this.id + " successfully connected to Broker. ");
                         out.flush();
 
                         //to message 8a prepei na periexei to id, to ip kai to port tou broker me ton opoio exoume anoi3ei sundesh, ola xwrismena me keno
@@ -64,11 +82,13 @@ public class PublisherImpl implements Publisher
                         b.setRequestSocket(connection);
 
                         //ousiastika enhmerwnoume th lista me tous brokers me ta topics gia ta opoia einai upeu8unos o ka8enas
-                        String topic = (String) in.readObject();
+                        /*String topic = (String) in.readObject();
                         ArrayList<Topic> top = new ArrayList<Topic>();
                         for(int i = 0; i < topic.split(" ").length; i++){
                             top.add(new Topic(topic.split(" ")[i]));
-                        }
+                        }*/
+                        Info<Topic> topic = (Info<Topic>) in.readObject();
+                        ArrayList<Topic> top = topic;
                         b.setTopics(top);
                         b.setRequestSocket(connection);
                         brokers.set(id, b);
@@ -91,15 +111,9 @@ public class PublisherImpl implements Publisher
                         out = new ObjectOutputStream(connection.getOutputStream());
                         in = new ObjectInputStream(connection.getInputStream());
                         String newtopic = (String) in.readObject();
-                        while (!newtopic.equals("bye")) {
-                            String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
-                            out.writeObject(reply);
+                        String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
+                        out.writeObject(reply);
 
-                            connection = providerSocket.accept();
-                            ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
-                            ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
-                            newtopic = (String) in.readObject();
-                        }
                         /*in.close();
                         out.close();
                         connection.close();*/
