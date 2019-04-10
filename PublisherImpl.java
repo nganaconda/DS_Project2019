@@ -46,9 +46,12 @@ public class PublisherImpl extends Thread implements Publisher {
     public static void main(String[] args) {
         //new PublisherImpl("192.168.1.6", 4321).connect();
         //int numOfPubs = Integer.parseInt(args[0]);
-        int numOfPubs = 6;
+        int numOfPubs = 21;
         if(numOfPubs == 0){
             System.out.println("You have chosen to run no Publishers. ");
+        }
+        else if(numOfPubs >= 21) {
+            System.out.println("Too many publishers.");
         }
         else{
             for(int i = 1; i <= numOfPubs; i++) {
