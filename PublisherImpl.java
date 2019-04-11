@@ -31,20 +31,26 @@ public class PublisherImpl extends Thread implements Publisher
     }
 
     public void run(){
+        this.init(id);
+        System.out.println(id + ": ");
+        for(Topic t : this.getTopics()){
+            System.out.print(t.getBusLine());
+            System.out.print(" ");
+        }
+        System.out.println();
         this.connect();
     }
 
 
     public static void main(String[] args)
     {
-        //new PublisherImpl("192.168.1.6", 4321).connect();
         int numOfPubs = Integer.parseInt(args[0]);
         if(numOfPubs == 0){
             System.out.println("You have chosen to run no Publishers. ");
         }
         else{
-            for(int i = 0; i < numOfPubs; i++) {
-                publishers.add(new PublisherImpl("192.168.1.6", 4321+i, i));
+            for(int i = 1; i <= numOfPubs; i++) {
+                publishers.add(new PublisherImpl("192.168.1.8", 4321+i-1, i));
             }
             for(PublisherImpl p : publishers){
                 p.start();
@@ -54,6 +60,66 @@ public class PublisherImpl extends Thread implements Publisher
 
     @Override
     public void init(int x) {
+        int numberOfLines = 0;
+        try{
+            File f1 = new File("DS_project_dataset/busLinesNew.txt");
+            BufferedReader br1 = new BufferedReader(new FileReader(f1));
+            StringBuilder text = new StringBuilder();
+            String line;
+            while((line=br1.readLine())!=null) {
+                text.append("\n");
+                numberOfLines++;
+            }
+
+
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        int i = numberOfLines/publishers.size();
+        int mod = numberOfLines % publishers.size();
+
+        int portionStart = (x - 1)*i + 1;
+
+        int portionEnd;
+        if(x == publishers.size()) {
+            portionEnd =  portionStart + i - 1 + mod;
+        }else {
+            portionEnd = portionStart + i - 1;
+        }
+        System.out.println("portionStart: " + portionStart);
+        System.out.println("portionEnd: " + portionEnd);
+
+
+
+        int lineNumber = 1;
+        try {
+            File f1 = new File("DS_project_dataset/busLinesNew.txt");
+            BufferedReader br1 = new BufferedReader(new FileReader(f1));
+            StringBuilder text1 = new StringBuilder();
+
+            String line;
+            String[] myLine;
+
+            while((line=br1.readLine()) != null) {
+                text1.append(line + "\n");
+
+                while(lineNumber>=portionStart && lineNumber<=portionEnd) {
+                    myLine = line.split(",");
+                    Topic t = new Topic(myLine[0]);
+                    publishers.get(x-1).getTopics().add(t);
+
+                    line = br1.readLine();
+                    text1.append(line + "\n");
+                    lineNumber++;
+                }
+                lineNumber++;
+            }
+
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -135,5 +201,13 @@ public class PublisherImpl extends Thread implements Publisher
                 }
             }*/
 
+    }
+
+    public ArrayList<Topic> getTopics() {
+        return topics;
+    }
+
+    public void setTopics(ArrayList<Topic> topics) {
+        this.topics = topics;
     }
 }

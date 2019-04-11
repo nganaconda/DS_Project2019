@@ -23,7 +23,7 @@ public class SubscriberImpl implements Subscriber {
     }
 
     public static void main(String[] args) {
-        SubscriberImpl sub = new SubscriberImpl("192.168.1.6", 1234);
+        SubscriberImpl sub = new SubscriberImpl("192.168.1.8", 1234);
         sub.connect();
         sub.ask("821");
     }

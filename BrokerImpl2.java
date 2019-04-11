@@ -1,9 +1,12 @@
 package DS_as1;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,13 +28,12 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
-        {add(new PublisherImpl("192.168.1.6", 4321, 0));}
-        /*{add(new PublisherImpl("192.168.1.6", 4322, 1));}*/
+        {add(new PublisherImpl("192.168.1.8", 4321, 1));}
+        {add(new PublisherImpl("192.168.1.8", 4322, 2));}
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
     };
-
 
     public BrokerImpl2(int idnew, String ipnew, int portnew)
     {
@@ -174,7 +176,18 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     @Override
     public void calculateKeys() {
         String portS = Integer.toString(this.port);
-        this.hashipport = (ip + portS).hashCode()%10000 * 5;
+        String hashippor = ip + portS;
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(hashippor.getBytes());
+            byte[] digest = md.digest();
+            hashipport = DatatypeConverter.printHexBinary(digest).hashCode();
+            if(hashipport < 0){
+                hashipport = -hashipport;
+            }
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -301,30 +314,66 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
             FileReader fr = new FileReader(buslines);
             BufferedReader br = new BufferedReader(fr);
 
-            String line = br.readLine();
+            String line = "";
             String busID;
             String lineCode;
+            int lineNumber = 0;
 
             while ((line = br.readLine()) != null) {
+                lineNumber++;
                 busID = line.split(",")[1];
                 lineCode = line.split(",")[0];
 
-                int hashtopic = busID.hashCode();
+                int hashtopic = 0;
+                MessageDigest md = null;
+                try {
+                    md = MessageDigest.getInstance("MD5");
+                    md.update(busID.getBytes());
+                    byte[] digest = md.digest();
+                    hashtopic = DatatypeConverter.printHexBinary(digest).hashCode();
+                    if(hashtopic < 0){
+                        hashtopic = - hashtopic;
+                    }
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+
                 int nearestNode = Integer.MAX_VALUE;
 
-                while(true) {
-                    for (Broker b : brokers) {
-                        if (hashtopic <= b.getHashipport() && b.getHashipport() < nearestNode) {
+
+                for (Broker b : brokers) {
+                    if (hashtopic <= b.getHashipport() && b.getHashipport() < nearestNode) {
+                        nearestNode = b.getHashipport();
+                    }
+                }
+
+                if(nearestNode == Integer.MAX_VALUE){
+                    /*hashtopic = brokers.get(0).getHashipport();*/
+                    int min = Integer.MAX_VALUE;
+                    for(Broker b : brokers){
+                        if(b.getTopics().size() < min){
+                            min = b.getTopics().size();
                             nearestNode = b.getHashipport();
                         }
                     }
-                    if(nearestNode == Integer.MAX_VALUE){
-                        hashtopic = brokers.get(0).getHashipport();
-                    }
-                    else{
-                        break;
+                }
+
+                int min = Integer.MAX_VALUE;
+                Broker mini = brokers.get(0);
+                for(Broker b : brokers){
+                    if(nearestNode == b.getHashipport()){
+                        for(Broker bro : brokers){
+                            if(bro.getTopics().size() < mini.getTopics().size()){
+                                min = bro.getHashipport();
+                                mini = bro;
+                            }
+                        }
+                        if(b.getTopics().size() >= mini.getTopics().size()+1){
+                            nearestNode = min;
+                        }
                     }
                 }
+
                 for (Broker b : brokers) {
                     if (b.getHashipport() == nearestNode) b.addTopics(new Topic(lineCode));
                 }
