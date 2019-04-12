@@ -23,9 +23,10 @@ public class SubscriberImpl implements Subscriber {
     }
 
     public static void main(String[] args) {
-        SubscriberImpl sub = new SubscriberImpl("192.168.1.8", 1234);
+        SubscriberImpl sub = new SubscriberImpl("192.168.1.6", 1234);
         sub.connect();
-        sub.ask("821");
+        sub.ask("040");
+        sub.ask("021");
     }
 
 
@@ -66,7 +67,7 @@ public class SubscriberImpl implements Subscriber {
                     for (Broker br : brokers) {
                         System.out.println(br.getPort() + ": ");
                         for (Topic t : br.getTopics()) {
-                            System.out.print(t.getBusLine());
+                            System.out.print(t.getBusLineId());
                             System.out.print(" ");
                         }
                         System.out.println();
@@ -108,7 +109,7 @@ public class SubscriberImpl implements Subscriber {
         for (Broker b : brokers) {
             try {
                 for (Topic t : b.getTopics()) {
-                    if (t.getBusLine().equals(line)) {
+                    if (t.getBusLineId().equals(line)) {
                         requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
                         out = new ObjectOutputStream(requestSocket.getOutputStream());
                         in = new ObjectInputStream(requestSocket.getInputStream());
@@ -116,8 +117,10 @@ public class SubscriberImpl implements Subscriber {
                         out.writeObject(line);
                         out.flush();
 
-                        String finalreply = (String) in.readObject();
-                        System.out.println(finalreply);
+                        Tuple<Value> finalreply = (Tuple<Value>) in.readObject();
+                        for(Value v : finalreply){
+                            System.out.println("\n" + v.getBus().getInfo() + " " + line + " " + v.getBus().getRouteCode() + " " + v.getBus().getLineCode() + " " + v.getBus().getVehicleId() + " " + v.getLatitude() + " " + v.getLongitude());
+                        }
                     }
                 }
             }

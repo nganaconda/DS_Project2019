@@ -32,12 +32,12 @@ public class PublisherImpl extends Thread implements Publisher
 
     public void run(){
         this.init(id);
-        System.out.println(id + ": ");
+        System.out.println("\n" + id + ": ");
         for(Topic t : this.getTopics()){
-            System.out.print(t.getBusLine());
+            System.out.print(t.getBusLineId());
             System.out.print(" ");
         }
-        System.out.println();
+        System.out.println("\n");
         this.connect();
     }
 
@@ -50,7 +50,7 @@ public class PublisherImpl extends Thread implements Publisher
         }
         else{
             for(int i = 1; i <= numOfPubs; i++) {
-                publishers.add(new PublisherImpl("192.168.1.8", 4321+i-1, i));
+                publishers.add(new PublisherImpl("192.168.1.6", 4321+i-1, i));
             }
             for(PublisherImpl p : publishers){
                 p.start();
@@ -106,7 +106,7 @@ public class PublisherImpl extends Thread implements Publisher
 
                 while(lineNumber>=portionStart && lineNumber<=portionEnd) {
                     myLine = line.split(",");
-                    Topic t = new Topic(myLine[0]);
+                    Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
                     publishers.get(x-1).getTopics().add(t);
 
                     line = br1.readLine();
@@ -116,9 +116,26 @@ public class PublisherImpl extends Thread implements Publisher
                 lineNumber++;
             }
 
-        }catch (IOException e) {
+            File f2 = new File("DS_project_dataset/busPositionsNew.txt");
+            BufferedReader br2 = new BufferedReader(new FileReader(f2));
+            StringBuilder text2 = new StringBuilder();
+
+            while((line = br2.readLine()) != null) {
+                text2.append(line + "\n");
+                myLine = line.split(",");
+                Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
+                publishers.get(x-1).getBuses().add(b);
+                //buses.add(b);
+                Value v = new Value(b, Double.parseDouble(myLine[3]), Double.parseDouble(myLine[4]));
+                publishers.get(x-1).getValues().add(v);
+                //values.add(v);
+            }
+
+
+        } catch (IOException e) {
             e.printStackTrace();
-        }
+}
+
 
 
     }
@@ -165,7 +182,7 @@ public class PublisherImpl extends Thread implements Publisher
                         System.out.println("Broker " + b.getPort() + ":");
                         for(Topic t : b.getTopics())
                         {
-                            System.out.print(t.getBusLine() + " ");
+                            System.out.print(t.getBusLineId() + " ");
                         }
                         System.out.println("\n");
 
@@ -181,8 +198,7 @@ public class PublisherImpl extends Thread implements Publisher
                         out = new ObjectOutputStream(connection.getOutputStream());
                         in = new ObjectInputStream(connection.getInputStream());
                         Topic newtopic = (Topic) in.readObject();
-                        String reply = "821,1804,10015,37.985427,23.75514,Mar  4 2019 10:39:00:000AM";
-                        out.writeObject(reply);
+                        push(newtopic.getBusLineId());
 
                         /*in.close();
                         out.close();
@@ -203,11 +219,65 @@ public class PublisherImpl extends Thread implements Publisher
 
     }
 
+    public void push(String busLineId) {
+        Tuple<Value> tupleList = new Tuple<>();
+        String lineCode = null;
+        for(int i = 0; i < this.topics.size(); i++) {
+            if(busLineId.equals(this.topics.get(i).getBusLineId())) {
+                lineCode = this.topics.get(i).getLineCode();
+            }
+        }
+        //System.out.println("Size of topics list is: " + pubs.get(id-1).getTopics().size());
+        System.out.println(lineCode);
+        //System.out.println("Size of values list is: " + pubs.get(id-1).getValues().size());
+        if(lineCode != null) {
+            for(int i=0; i < this.values.size(); i++) {
+                //String lineCodeTemp = pubs.get(id-1).getValues().get(i).getBus().getLineCode();
+                if(lineCode.equals(this.values.get(i).getBus().getLineCode())) {
+                    tupleList.add(this.values.get(i));
+                    //System.out.println(lineCodeTemp);
+                }
+            }
+        }
+        if(!tupleList.isEmpty()) {
+            System.out.println("TupleList size is: " + tupleList.size());
+            try{
+                out.writeObject("Yes");
+                out.writeObject(tupleList);
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else{
+            try{
+                out.writeObject("No");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public ArrayList<Topic> getTopics() {
         return topics;
     }
 
     public void setTopics(ArrayList<Topic> topics) {
         this.topics = topics;
+    }
+
+    public ArrayList<Value> getValues() {
+        return values;
+    }
+
+    public void setValues(ArrayList<Value> values) {
+        this.values = values;
+    }
+
+    public ArrayList<Bus> getBuses() {
+        return buses;
+    }
+
+    public void setBuses(ArrayList<Bus> buses) {
+        this.buses = buses;
     }
 }

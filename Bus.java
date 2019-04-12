@@ -1,70 +1,67 @@
 package DS_as1;
 
-public class Bus
-{
-    private String lineNumber;
-    private String routeCode;
-    private String vehicleid;
-    private String lineName;
-    private String buslineid;
-    private String info;
+import java.io.Serializable;
 
-    public Bus(String lineN, String routeC, String vehicle, String lineNa, String busline, String inf){
-        lineNumber = lineN;
-        routeCode = routeC;
-        vehicleid = vehicle;
-        lineName = lineNa;
-        buslineid = busline;
-        info = inf;
+public class Bus implements Serializable {
+
+    private String routeCode,vehicleId, lineName, lineCode, info;
+
+
+    public Bus(String lineCode, String routeCode, String vehicleId, String info) { // bus Positions.txt
+        this.lineCode = lineCode;         // busLineId = lineId
+        this.routeCode = routeCode;
+        this.vehicleId = vehicleId;
+        this.info = info;                   // info = timestampOfBusPosition
     }
 
 
-    public String getLineNumber() {
-        return lineNumber;
-    }
 
     public String getRouteCode() {
         return routeCode;
-    }
-
-    public String getVehicleid() {
-        return vehicleid;
-    }
-
-    public String getLineName() {
-        return lineName;
-    }
-
-    public String getBuslineid() {
-        return buslineid;
-    }
-
-    public String getInfo() {
-        return info;
-    }
-
-    public void setLineNumber(String lineNumber) {
-        this.lineNumber = lineNumber;
     }
 
     public void setRouteCode(String routeCode) {
         this.routeCode = routeCode;
     }
 
-    public void setVehicleid(String vehicleid) {
-        this.vehicleid = vehicleid;
+    public String getVehicleId() {
+        return vehicleId;
+    }
+
+    public void setVehicleId(String vehicleId) {
+        this.vehicleId = vehicleId;
+    }
+
+    public String getLineName() {
+        return lineName;
     }
 
     public void setLineName(String lineName) {
         this.lineName = lineName;
     }
 
-    public void setBuslineid(String buslineid) {
-        this.buslineid = buslineid;
+    //public String getBuslineId() {
+    //   return buslineId;
+    //}
+
+    //public void setBuslineId(String buslineId) {
+    //     this.buslineId = buslineId;
+    //}
+
+    public String getInfo() {
+        return info;
     }
 
     public void setInfo(String info) {
         this.info = info;
     }
 
+
+    public String getLineCode() {
+        return lineCode;
+    }
+
+    public void setLineCode(String lineCode) {
+        this.lineCode = lineCode;
+    }
 }

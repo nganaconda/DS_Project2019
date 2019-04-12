@@ -28,8 +28,8 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
-        {add(new PublisherImpl("192.168.1.8", 4321, 1));}
-        {add(new PublisherImpl("192.168.1.8", 4322, 2));}
+        {add(new PublisherImpl("192.168.1.6", 4321, 1));}
+        {add(new PublisherImpl("192.168.1.6", 4322, 2));}
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
@@ -113,7 +113,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
 
             //diatrexei ola ta topics tou o trexwn broker kai an einai upeu8unos gia to topic to opoio zhtaei o sub tote enhmerwnei ton antoistoixo pub
             for (Topic t : this.topics) {
-                if (topicAsked.getBusLine().equals(t.getBusLine())) {
+                if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
                     System.out.println(this.port + " EGW");
                     for(PublisherImpl pub : registeredPublishers) {
                         try {
@@ -126,11 +126,14 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                         }
                         this.notifyPublisher(t);
                         //to katw einai h proswrinh ekdosh ths pull giati mexri twra xrhsimopoioume Strings
-                        String reply;
+                        Tuple<Value> reply;
                         try {
-                            reply = (String) in.readObject();
-                            outS.writeObject(reply);
-                            outS.flush();
+                            String repl = (String) in.readObject();
+                            if(repl.equals("Yes")) {
+                                reply = (Tuple<Value>) in.readObject();
+                                outS.writeObject(reply);
+                                outS.flush();
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ClassNotFoundException e) {
@@ -375,14 +378,14 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 }
 
                 for (Broker b : brokers) {
-                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(lineCode));
+                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(busID));
                 }
             }
             for(Broker b : brokers){
                 System.out.println("Broker " + b.getPort() + ":");
                 for(Topic t : b.getTopics())
                 {
-                    System.out.print(" " + t.getBusLine() + " ");
+                    System.out.print(" " + t.getBusLineId() + " ");
                 }
                 System.out.println("\n");
             }
