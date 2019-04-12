@@ -41,12 +41,13 @@ public class PublisherImpl extends Thread implements Publisher {
     public void run(){
         //this.connect();
         this.init(id);
+        //this.push("060"); ENABLE THIS ONLY IF THERE IS A CONNECTION WITH A BROKER
     }
 
     public static void main(String[] args) {
         //new PublisherImpl("192.168.1.6", 4321).connect();
         //int numOfPubs = Integer.parseInt(args[0]);
-        int numOfPubs = 21;
+        int numOfPubs = 2; // temp for testing
         if(numOfPubs == 0){
             System.out.println("You have chosen to run no Publishers. ");
         }
@@ -59,7 +60,9 @@ public class PublisherImpl extends Thread implements Publisher {
             }
             for(PublisherImpl p: pubs) { // 1, 2, 3, 4
                 p.start();
+                //p.push("060");
             }
+
 
         }
     }
@@ -128,247 +131,45 @@ public class PublisherImpl extends Thread implements Publisher {
 
             while((line=br1.readLine()) != null) {
                 text1.append(line + "\n");
-
                 //System.out.println("I ma in");
                 while(lineNumber>=portionStart && lineNumber<=portionEnd) {
                     myLine = line.split(",");
                     Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
                     pubs.get(x-1).getTopics().add(t);
-                    System.out.println("I ma in 2");
+                    //System.out.println("I ma in 2");
 
                     line = br1.readLine();
                     text1.append(line + "\n");
                     lineNumber++;
                 }
-
                 lineNumber++;
-
             }
+
+            File f2 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
+            BufferedReader br2 = new BufferedReader(new FileReader(f2));
+            StringBuilder text2 = new StringBuilder();
+
+            while((line = br2.readLine()) != null) {
+                text2.append(line + "\n");
+                myLine = line.split(",");
+                Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
+                pubs.get(x-1).getBuses().add(b);
+                //buses.add(b);
+                Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
+                pubs.get(x-1).getValues().add(v);
+                //values.add(v);
+            }
+
+
+
             //System.out.println(text1);
-            System.out.println(pubs.get(x-1).getTopics().size());
+            //System.out.println(pubs.get(x-1).getTopics().size());
 
 
-//            while(lineNumber<=portionStart && lineNumber>=portionEnd) {
-//                    line = br1.readLine();
-//
-//            }
+
         }catch (IOException e) {
             e.printStackTrace();
         }
-
-
-//        for(int j = portionStart;j <= portionEnd;j++) {
-//            // this for reads lines
-//        }
-
-
-
-
-
-
-
-
-
-
-        /*
-        if(pubs.size()>=11){
-            System.out.println("Publishers are way too many so I go to sleep...");
-        }else {
-
-            try{
-               if(pubs.size()==2) {
-                   File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLinesNew.txt");
-                   BufferedReader br1 = new BufferedReader(new FileReader(f1));  // 1st Publisher - Topics
-                   StringBuilder text1 = new StringBuilder();
-                   int lineNumber = 1;
-                   String line;
-                   String[] myLine;
-                   while(lineNumber<=10) {
-                       line = br1.readLine();
-                       text1.append(line + "\n");
-                       myLine = line.split(",");
-                       //System.out.println("myLine " + myLine[0]);
-                       Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                       if(x==0) {
-                           pubs.get(0).getTopics().add(t);
-                       }
-                       lineNumber++;
-                   }
-
-                   File f2 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
-                   BufferedReader br2 = new BufferedReader(new FileReader(f2));  // 1st Publisher - Values
-                   StringBuilder text2 = new StringBuilder();
-
-                   while((line=br2.readLine()) != null) {
-                       text2.append(line + "\n");
-                       myLine = line.split(",");
-                       Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
-                       Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
-                       if(x==0) {
-                           pubs.get(0).getValues().add(v);
-                       }
-                   }
-
-
-
-
-
-
-
-                   br1.close();  // 2nd Publisher - Topics
-                   text1 = null;
-                   lineNumber = 1;
-                   while(lineNumber<=10) {  // Do Nothing
-                       line = br1.readLine();
-                       text1.append(line + "\n");
-
-                       lineNumber++;
-                   }
-                   while((line=br1.readLine()) != null) {
-                       text1.append(line + "\n");
-                       myLine = line.split(",");
-                       if(lineNumber==11) {
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(1).getTopics().add(t);
-                           }
-
-                       }
-                       while(lineNumber>=11 && (line=br1.readLine()) != null) {
-                           text1.append(line + "\n");
-                           myLine = line.split(",");
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(1).getTopics().add(t);
-                           }
-
-                           lineNumber++;
-                       }
-
-                       lineNumber++;
-                   }
-
-                   br2.close(); // 2nd Publisher - Values
-                   text2 = null;
-                   while((line=br2.readLine()) != null) {
-                       text2.append(line + "\n");
-                       myLine = line.split(",");
-                       Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
-                       Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
-                       if(x==1) {
-                           pubs.get(1).getValues().add(v);
-                       }
-                   }
-
-
-               }else if(pubs.size()==3) {
-                   File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLinesNew.txt");
-                   BufferedReader br1 = new BufferedReader(new FileReader(f1));  // 1st Publisher - Topics
-                   StringBuilder text1 = new StringBuilder();
-                   int lineNumber = 1;
-                   String line;
-                   String[] myLine;
-
-
-                   File f2 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
-                   BufferedReader br2 = new BufferedReader(new FileReader(f2));  // 1st Publisher - Values
-                   StringBuilder text2 = new StringBuilder();
-
-                   while((line=br2.readLine()) != null) {
-                       text2.append(line + "\n");
-                       myLine = line.split(",");
-                       Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
-                       Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
-                       if(x==0) {
-                           pubs.get(0).getValues().add(v);
-                       }
-                   }
-
-                   br1.close();  // 2nd Publisher - Topics
-                   text1 = null;
-                   while(lineNumber<=6) { // Fill the Topics of the 1st Publisher
-                       line = br1.readLine();
-                       text1.append(line + "\n");
-                       myLine = line.split(",");
-                       Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                       if(x==0) {
-                           pubs.get(0).getTopics().add(t);
-                       }
-                       lineNumber++;
-                   }
-                   while(lineNumber>=7 && lineNumber<=13) {
-                       line = br1.readLine();
-                       text1.append(line + "\n");
-                       myLine = line.split(",");
-                       if(lineNumber==7) {
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(1).getTopics().add(t);
-                           }
-                       }
-                       while(lineNumber>=7 && lineNumber<=13 && (line=br1.readLine()) != null) {
-                           text1.append(line + "\n");
-                           myLine = line.split(",");
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(1).getTopics().add(t);
-                           }
-                           lineNumber++;
-                       }
-                       lineNumber++;
-                   }
-                   while(lineNumber>=14 && lineNumber<=20) {
-                       line = br1.readLine();
-                       text1.append(line + "\n");
-                       myLine = line.split(",");
-                       if(lineNumber==14) {
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(2).getTopics().add(t);
-                           }
-                       }
-                       while( lineNumber>=14 && lineNumber<=20 && (line=br1.readLine()) != null) {
-                           text1.append(line + "\n");
-                           myLine = line.split(",");
-                           Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                           if(x==1) {
-                               pubs.get(2).getTopics().add(t);
-                           }
-                           lineNumber++;
-                       }
-                       lineNumber++;
-                   }
-                   br2.close();
-                   text2 = null;
-                   while((line=br2.readLine()) != null) {
-                       text2.append(line + "\n");
-                       myLine = line.split(",");
-                       Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
-                       Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
-                       if(x==0) {
-                           pubs.get(1).getValues().add(v);
-                       }
-                   }
-
-
-
-
-               }else if(pubs.size()==4) {
-
-
-
-               }
-
-
-
-            }catch (IOException e) {
-                e.printStackTrace();
-            }
-
-
-        }
-        */
-
 
 
     }
@@ -469,6 +270,43 @@ public class PublisherImpl extends Thread implements Publisher {
         */
 
     public void push(String busLineId) {
+        Tuple<Value> tupleList = new Tuple<>();
+        String lineCode = null;
+        for(int i=0;i<pubs.get(id-1).getTopics().size();i++) {
+            if(busLineId.equals(pubs.get(id-1).getTopics().get(i).getBusLineId())) {
+                lineCode = pubs.get(id-1).getTopics().get(i).getLineCode();
+            }
+        }
+        //System.out.println("Size of topics list is: " + pubs.get(id-1).getTopics().size());
+        System.out.println(lineCode);
+        //System.out.println("Size of values list is: " + pubs.get(id-1).getValues().size());
+        if(lineCode!=null) {
+            for(int i=0;i<pubs.get(id-1).getValues().size();i++) {
+                //String lineCodeTemp = pubs.get(id-1).getValues().get(i).getBus().getLineCode();
+                if(lineCode.equals(pubs.get(id-1).getValues().get(i).getBus().getLineCode())) {
+                    tupleList.add(pubs.get(id-1).getValues().get(i));
+                    //System.out.println(lineCodeTemp);
+
+                }
+            }
+        }
+        if(!tupleList.isEmpty()) {
+            System.out.println("TupleList size is: " + tupleList.size());
+            try{
+                out.writeObject(tupleList);
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
+        }else {
+            try{
+                out.writeObject("There is no busLine " + busLineId);
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+
 
     }
 
