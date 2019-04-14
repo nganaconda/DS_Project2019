@@ -31,7 +31,12 @@ public class PublisherImpl extends Thread implements Publisher
     }
 
     public void run(){
-        this.init(id);
+        Thread t1 = new Thread(){
+            public void run(){
+                PublisherImpl.this.init(id);
+            }
+        };
+        t1.start();
         System.out.println("\n" + id + ": ");
         for(Topic t : this.getTopics()){
             System.out.print(t.getBusLineId());
