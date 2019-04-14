@@ -1,10 +1,11 @@
 package DS_as1;
 
-public interface Subscriber extends Node
-{
-    //public void register(Broker brok, Topic topic);
+public interface Subscriber extends Node {
+    public void connect();
 
-    //public void disconnect(Broker brok, Topic topic);
+    public Tuple<Value> ask(String line);
 
-    //public void visualiseData(Topic topic, Value val);
+    public void visualiseData(Tuple<Value> finalreply, String line);
+
+    public void disconnect();
 }
