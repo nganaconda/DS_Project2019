@@ -1,21 +1,12 @@
-import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+package DS_as1;
 
-public interface Publisher extends Node {
-
+public interface Publisher extends Node
+{
     //public void getBrokerList();
 
-    //public void hashTopic(Topic t);
+    //public Broker hashTopic(Topic topic);
 
-    public void push(String busLineId);  // Topic t, Value v
+    public void push(String busLineId);
 
     public void notifyFailure();
-
-    public String getIp();
-
-    public int getPort();
-
-    //public Socket getSocket();
-
 }
