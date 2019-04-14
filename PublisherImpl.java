@@ -19,7 +19,7 @@ public class PublisherImpl extends Thread implements Publisher
     ObjectOutputStream out;
     ObjectInputStream in;
     private ArrayList<Bus> buses = new ArrayList<>();
-    private ArrayList<Value> values = new ArrayList<>();
+    private static ArrayList<Value> values = new ArrayList<>();
     private ArrayList<Topic> topics = new ArrayList<>();
     private static ArrayList<PublisherImpl> publishers = new ArrayList<PublisherImpl>();
 
@@ -50,7 +50,7 @@ public class PublisherImpl extends Thread implements Publisher
         }
         else{
             for(int i = 1; i <= numOfPubs; i++) {
-                publishers.add(new PublisherImpl("192.168.1.6", 4321+i-1, i));
+                publishers.add(new PublisherImpl("192.168.1.9", 4321+i-1, i));
             }
             for(PublisherImpl p : publishers){
                 p.start();
@@ -120,6 +120,36 @@ public class PublisherImpl extends Thread implements Publisher
             BufferedReader br2 = new BufferedReader(new FileReader(f2));
             StringBuilder text2 = new StringBuilder();
 
+            int lineNum = 0;
+            while((line = br2.readLine()) != null) {
+                for(int j=0;j < 50;j++) {
+                    if(line!=null) {
+                        text2.append(line + "\n");
+                        myLine = line.split(",");
+                        Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
+                        publishers.get(x-1).getBuses().add(b);
+                        Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
+                        publishers.get(x-1).getValues().add(v);
+                        System.out.println("myLine is: " + myLine[5]);
+                        lineNum++;
+                        line = br2.readLine();
+                    }else {
+                        break;
+                    }
+                }
+                System.out.println("Publisher id is: " + id );
+                try {
+
+                    this.sleep(10000);
+                }catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+           /* File f2 = new File("DS_project_dataset/busPositionsNew.txt");
+            BufferedReader br2 = new BufferedReader(new FileReader(f2));
+            StringBuilder text2 = new StringBuilder();
+
             while((line = br2.readLine()) != null) {
                 text2.append(line + "\n");
                 myLine = line.split(",");
@@ -129,7 +159,7 @@ public class PublisherImpl extends Thread implements Publisher
                 Value v = new Value(b, Double.parseDouble(myLine[3]), Double.parseDouble(myLine[4]));
                 publishers.get(x-1).getValues().add(v);
                 //values.add(v);
-            }
+            }*/
 
 
         } catch (IOException e) {

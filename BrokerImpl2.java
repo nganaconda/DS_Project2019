@@ -28,8 +28,8 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
-        {add(new PublisherImpl("192.168.1.6", 4321, 1));}
-        {add(new PublisherImpl("192.168.1.6", 4322, 2));}
+        {add(new PublisherImpl("192.168.1.9", 4321, 1));}
+        {add(new PublisherImpl("192.168.1.9", 4322, 2));}
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
@@ -180,6 +180,7 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
     public void calculateKeys() {
         String portS = Integer.toString(this.port);
         String hashippor = ip + portS;
+        System.out.println(this.id + " " + hashipport);
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(hashippor.getBytes());
@@ -366,7 +367,7 @@ public class BrokerImpl2 extends Thread implements Broker, Serializable
                 for(Broker b : brokers){
                     if(nearestNode == b.getHashipport()){
                         for(Broker bro : brokers){
-                            if(bro.getTopics().size() < mini.getTopics().size()){
+                            if(bro.getTopics().size() < b.getTopics().size()){
                                 min = bro.getHashipport();
                                 mini = bro;
                             }

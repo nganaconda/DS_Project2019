@@ -16,20 +16,20 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     private int id;
     private int port;
     private String ip;
-    private int hashipport;
+    private int hashipport;     //A hash of a string containing the ip and the port of the Broker
     private Socket requestSocket;
     private ServerSocket replySocket = null;
     public Socket connection;
-    private ObjectOutputStream out = null;
-    private ObjectOutputStream outS = null;
-    private ObjectInputStream in = null;
-    private ObjectInputStream inS = null;
+    private ObjectOutputStream out = null;      //out is used to communicate with a Publisher
+    private ObjectOutputStream outS = null;     //outS is used to communicate with a Subscriber
+    private ObjectInputStream in = null;        //in is used to communicate with a Publisher
+    private ObjectInputStream inS = null;       //inS is used to communicate with a Subscriber
     private static Info info;
     public ArrayList<Topic> topics = new ArrayList<Topic>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
-        {add(new PublisherImpl("192.168.1.6", 4321, 1));}
-        {add(new PublisherImpl("192.168.1.6", 4322, 2));}
+        {add(new PublisherImpl("192.168.1.9", 4321, 1));}
+        {add(new PublisherImpl("192.168.1.9", 4322, 2));}
     };
     private List<SubscriberImpl> registeredSubscribers = new ArrayList<SubscriberImpl>()
     {
@@ -78,30 +78,29 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     }
 
 
+
     public void run()
     {
-        //diatrexei th lista me tous publishers kai anoigei sundesh mazi tous
+        /* First the Thread establishes a connection with each Publisher in the registeredPublishers list and informs them of the
+         * topics that it is responsible for. */
         for(PublisherImpl p : registeredPublishers) {
             this.acceptConnection(p);
-            //dhmiourgei ena string me ola ta topics tou trexonta broker kai ta stelnei ston trexonta publishers
-            /*String topic = ""*/;
             Info<Topic> topic = new Info<>();
             for (Topic t : this.topics) {
-                /*topic += t.getBusLine();
-                topic += " ";*/
                 topic.add(t);
             }
                 this.notifyPublisher(topic);
         }
 
-        //diatrexei th lista me tous subscribers kai anoigei sundesh mazi tous
+        /* Then, the Thread establishes a connection with each Subscriber in the registeredSubscribers list. */
         for(int i = 0; i < 1; i++){
             SubscriberImpl s = null;
             this.acceptConnection(s);
         }
 
+        /* The Thread now awaits for a new request from a Subscriber. That request is a String that will be used to create a new Topic
+         * named topicAsked. */
         while(true) {
-            //to topicAsked einai to topic gia to opoio zhtaei plhrofories o Sub
             try{
                 Socket connection = replySocket.accept();
                 outS = new ObjectOutputStream(connection.getOutputStream());
@@ -111,71 +110,36 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
             }
             Topic topicAsked = this.getInfo();
 
-            //diatrexei ola ta topics tou o trexwn broker kai an einai upeu8unos gia to topic to opoio zhtaei o sub tote enhmerwnei ton antoistoixo pub
+            /* Now, if the topic asked is contained in the Thread's list of topics, method pull is called. */
             for (Topic t : this.topics) {
                 if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
-                    System.out.println(this.port + " EGW");
                     for(PublisherImpl pub : registeredPublishers) {
                         try {
                             requestSocket = new Socket(pub.ip, pub.port);
                             in = new ObjectInputStream(requestSocket.getInputStream());
                             out = new ObjectOutputStream(requestSocket.getOutputStream());
+
+                            this.pull(t);
                         }
                         catch (IOException e){
-                            e.printStackTrace();
-                        }
-                        this.notifyPublisher(t);
-                        //to katw einai h proswrinh ekdosh ths pull giati mexri twra xrhsimopoioume Strings
-                        Tuple<Value> reply;
-                        try {
-                            String repl = (String) in.readObject();
-                            if(repl.equals("Yes")) {
-                                reply = (Tuple<Value>) in.readObject();
-                                outS.writeObject(reply);
-                                outS.flush();
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (ClassNotFoundException e) {
                             e.printStackTrace();
                         }
                     }
                 }
             }
         }
-        /*for(PublisherImpl p : registeredPublishers){
-            //kleinei th sundesh me ton publisher
-            try {
-                requestSocket = new Socket(p.ip, p.port);
-                in = new ObjectInputStream(requestSocket.getInputStream());
-                out = new ObjectOutputStream(requestSocket.getOutputStream());
-            }
-            catch (IOException e){
-                e.printStackTrace();
-            }
-            this.notifyPublisher(p, "bye");
-        }
-        for(SubscriberImpl s : registeredSubscribers){
-            //edw to keno stelnetai ston sub etsi wste an den htan upeu8unos o trexwn broker gia to topic pou zhthse o sub na mhn perimenei o sub
-            //adika apanthsh
-            try {
-                Socket connection = s.requestSocket;
-                outS = new ObjectOutputStream(connection.getOutputStream());
-                inS = new ObjectInputStream(connection.getInputStream());
-                outS.writeObject(" ");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }*/
     }
 
+    /* This is the main method. A Broker Thread from the list of Brokers provided in the Node class is initialized and starts. */
     public static void main(String[] args)
     {
-        BrokerImpl1 b =(BrokerImpl1) brokers.get(0);
-        b.init(0);
+        int id = Integer.parseInt(args[0]);
+        BrokerImpl1 b =(BrokerImpl1) brokers.get(id);
+        b.init(id);
         b.start();
     }
 
+    /* This method uses the MD5 algorithm to calculate a hash for the ip+port String of a Thread. */
     @Override
     public void calculateKeys() {
         String portS = Integer.toString(this.port);
@@ -193,6 +157,8 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         }
     }
 
+    /* This method is used to establish a connection with a given Publisher and to inform the said Publisher of the id, ip and port
+     * of the current Thread. */
     @Override
     public void acceptConnection(PublisherImpl pub) {
         String publisher;
@@ -224,6 +190,8 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         }
     }
 
+    /* This method is used to establish a connection with a given Subscriber and to inform the said Subscriber of all the topics that
+     * each Broker is responsible for. */
     @Override
     public void acceptConnection(SubscriberImpl sub)
     {
@@ -245,16 +213,13 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 outS.writeObject("Broker " + port + " successfully connected to Client.");
                 outS.flush();
 
-                //leei ston sub posoi einai oi brokers
                 outS.writeObject(brokers.size());
                 for(Broker b : brokers) {
                     Info<Topic> topics = new Info<>();
-                    //leei ston sub poion broker na enhmerwsei sth lista tou me tous brokers
                     outS.writeObject(b.getID());
                     for(Topic t : b.getTopics()){
                         topics.add(t);
                     }
-                    //leei ston sub gia poia topics einai upeu8unos o proanaferomenos broker
                     outS.writeObject(topics);
                 }
                 break;
@@ -264,6 +229,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         }
     }
 
+    /* This method is used to inform a Publisher that is already connected with the current Broker Thread of a given Object. */
     public void notifyPublisher(Object msg){
         try {
             out.writeObject(msg);
@@ -275,6 +241,8 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         }
     }
 
+    /* This method is used to obtain a String of a buslineID that a Subscriber already connected to the current Broker Thread
+     * and create a Topic object based on that buslineID. */
     @Override
     public Topic getInfo() {
         String msg;
@@ -292,21 +260,29 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         return topic;
     }
 
+    /* This method is used to obtain a Tuple of Values based on a Topic from a Publisher that is already connected to the current
+     * Broker Thread if the said Publisher is responsible for that Topic. If he is, then he first sends a String "Yes", and then
+     * the Tuple. */
     @Override
     public void pull(Topic topic) {
-        HashMap<Topic, Value> topicValueHashMap;
-        while(true) {
-            try {
-                topicValueHashMap = (HashMap<Topic, Value>) in.readObject();
-                outS.writeObject(topicValueHashMap);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+        this.notifyPublisher(topic);
+
+        Tuple<Value> reply;
+        try {
+            String repl = (String) in.readObject();
+            if(repl.equals("Yes")) {
+                reply = (Tuple<Value>) in.readObject();
+                outS.writeObject(reply);
+                outS.flush();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
+    /*  */
     @Override
     public void init(int x) {
         File buslines = new File("DS_project_dataset/busLinesNew.txt");
@@ -351,7 +327,6 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 }
 
                 if(nearestNode == Integer.MAX_VALUE){
-                    /*hashtopic = brokers.get(0).getHashipport();*/
                     int min = Integer.MAX_VALUE;
                     for(Broker b : brokers){
                         if(b.getTopics().size() < min){
@@ -366,7 +341,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 for(Broker b : brokers){
                     if(nearestNode == b.getHashipport()){
                         for(Broker bro : brokers){
-                            if(bro.getTopics().size() < mini.getTopics().size()){
+                            if(bro.getTopics().size() < b.getTopics().size()){
                                 min = bro.getHashipport();
                                 mini = bro;
                             }
@@ -385,7 +360,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 System.out.println("Broker " + b.getPort() + ":");
                 for(Topic t : b.getTopics())
                 {
-                    System.out.print(" " + t.getBusLineId() + " ");
+                    System.out.print(t.getBusLineId() + " ");
                 }
                 System.out.println("\n");
             }

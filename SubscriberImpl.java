@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class SubscriberImpl implements Subscriber {
     public int port;
@@ -15,6 +16,8 @@ public class SubscriberImpl implements Subscriber {
     public Socket requestSocket;
     public boolean registered = false;
     private Info info;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
 
     public SubscriberImpl(String ipnew, int portnew) {
         ip = ipnew;
@@ -23,10 +26,28 @@ public class SubscriberImpl implements Subscriber {
     }
 
     public static void main(String[] args) {
-        SubscriberImpl sub = new SubscriberImpl("192.168.1.6", 1234);
+        SubscriberImpl sub = new SubscriberImpl("192.168.2.13", 1234);
         sub.connect();
-        sub.ask("040");
-        sub.ask("021");
+        Scanner reader = new Scanner(System.in);
+        int x = 0;
+        while (x != 2) {
+            System.out.println("--------------------------");
+            System.out.println("| Menu                   |");
+            System.out.println("| 1. Search for a bus.   |");
+            System.out.println("| 2. Quit.               |");
+            System.out.println("--------------------------");
+            System.out.println("Choose your option: ");
+            x = reader.nextInt();
+            if (x == 1) {
+                System.out.println("Enter the bus's line id: ");
+                String line = reader.next();
+                sub.visualiseData(sub.ask(line), line);
+            }
+            if (x == 2) {
+                break;
+            }
+        }
+        sub.disconnect();
     }
 
 
@@ -38,8 +59,8 @@ public class SubscriberImpl implements Subscriber {
     @Override
     public void connect() {
         for (Broker b : brokers) {
-            ObjectOutputStream out = null;
-            ObjectInputStream in = null;
+            out = null;
+            in = null;
             String message;
             try {
                 requestSocket = new Socket(InetAddress.getByName(b.getIp()), b.getPort());
@@ -102,9 +123,10 @@ public class SubscriberImpl implements Subscriber {
         }
     }
 
-    public void ask(String line) {
+    public Tuple<Value> ask(String line) {
         ObjectInputStream in = null;
         ObjectOutputStream out = null;
+        Tuple<Value> finalreply = new Tuple<Value>();
 
         for (Broker b : brokers) {
             try {
@@ -117,10 +139,7 @@ public class SubscriberImpl implements Subscriber {
                         out.writeObject(line);
                         out.flush();
 
-                        Tuple<Value> finalreply = (Tuple<Value>) in.readObject();
-                        for(Value v : finalreply){
-                            System.out.println("\n" + v.getBus().getInfo() + " " + line + " " + v.getBus().getRouteCode() + " " + v.getBus().getLineCode() + " " + v.getBus().getVehicleId() + " " + v.getLatitude() + " " + v.getLongitude());
-                        }
+                        finalreply = (Tuple<Value>) in.readObject();
                     }
                 }
             }
@@ -129,6 +148,26 @@ public class SubscriberImpl implements Subscriber {
             }
             catch (ClassNotFoundException e) {
                 e.printStackTrace();
+            }
+        }
+        return finalreply;
+    }
+
+    public void visualiseData(Tuple<Value> finalreply, String line) {
+
+        for (Value v : finalreply) {
+            System.out.println("\n The bus with line id: " + line + " , has route code: " + v.getBus().getRouteCode() + " , line code: " + v.getBus().getLineCode() + " , vehicle's id: " + v.getBus().getVehicleId() + " , latitude: " + v.getLatitude() + " , and longitude: " + v.getLongitude() + " . Latest updated at: " + v.getBus().getInfo());
+        }
+    }
+
+    public void disconnect(){
+        for (Broker b : brokers) {
+            try {
+                in.close();
+                out.close();
+                requestSocket.close();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
             }
         }
     }
