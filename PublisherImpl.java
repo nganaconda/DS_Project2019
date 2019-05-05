@@ -220,7 +220,7 @@ public class PublisherImpl extends Thread implements Publisher {
         String lineCode = null;
 
         long crtD = System.currentTimeMillis()/1000;
-        System.out.println("Current time before initializing the search for the busLineId: " + crtD);
+        System.out.println("Current time before initializing the search for the busLineId: " + busLineId +  " "  + crtD);
 
         for(int i = 0; i < this.topics.size(); i++) { // Checks the busLines the pub is responsible for
             if(busLineId.equals(this.topics.get(i).getBusLineId())) {
@@ -242,7 +242,7 @@ public class PublisherImpl extends Thread implements Publisher {
                             emptyValues = false;
                         }
                     }
-
+                    System.out.println("I am still searching....");
                 }
             }
         }
