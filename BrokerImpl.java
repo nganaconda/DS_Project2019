@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class BrokerImpl1 extends Thread implements Broker, Serializable
+public class BrokerImpl extends Thread implements Broker, Serializable
 {
     private int id;
     private int port;
@@ -33,7 +33,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     {
     };
 
-    public BrokerImpl1(int idnew, String ipnew, int portnew)
+    public BrokerImpl(int idnew, String ipnew, int portnew)
     {
         id = idnew;
         ip = ipnew;
@@ -62,7 +62,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     public ArrayList<Topic> getTopics(){
         return this.topics;
     }
-
+    
     public void setTopics(ArrayList<Topic> t){
         this.topics = t;
     }
@@ -259,16 +259,16 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     public Topic getInfo() {
         String msg;
         Topic topic = null;
-        try {
-            msg = (String) inS.readObject();
-            System.out.println(msg);
-            topic = new Topic(msg);
+            try {
+                msg = (String) inS.readObject();
+                System.out.println(msg);
+                topic = new Topic(msg);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
         return topic;
     }
 
@@ -364,13 +364,13 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                                 mini = bro;
                             }
                         }
-                        if(b.getTopics().size() >= mini.getTopics().size()+1){
-                            nearestNode = min;
-                        }
+                    if(b.getTopics().size() >= mini.getTopics().size()+1){
+                        nearestNode = min;
+                    }
                     }
                 }
-
-                /* If a buslineID is already assigned to a Broker, then the rest of the lineCodes sharing the same
+				
+				/* If a buslineID is already assigned to a Broker, then the rest of the lineCodes sharing the same
                  * buslineID are also assigned to the same Broker. */
                 for(Broker b : brokers){
                     for(Topic t : b.getTopics()){

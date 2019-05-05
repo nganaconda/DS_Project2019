@@ -1,12 +1,28 @@
 package DS_as1;
 
+import java.util.ArrayList;
+
 public interface Publisher extends Node
 {
-    //public void getBrokerList();
+    public int getID();
 
-    //public Broker hashTopic(Topic topic);
+    public int getPort();
 
-    //public void push(Topic topic, Value val);
+    public String getIP();
 
-    //public void notifyFailure(Broker brok);
+    public ArrayList<Topic> getTopics();
+
+    public void setTopics(ArrayList<Topic> topics);
+
+    public ArrayList<Value> getValues();
+
+    public void setValues(ArrayList<Value> values);
+
+    public ArrayList<Bus> getBuses();
+
+    public void setBuses(ArrayList<Bus> buses);
+
+    public void push(String busLineId);
+
+    public void notifyFailure();
 }

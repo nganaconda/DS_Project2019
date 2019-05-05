@@ -8,7 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class PublisherImpl extends Thread implements Publisher {
+public class PublisherImpl1 extends Thread implements Publisher {
     private int port;
     public String ip;
     private int id;
@@ -20,7 +20,7 @@ public class PublisherImpl extends Thread implements Publisher {
     private static ArrayList<Value> values = new ArrayList<>();
     private ArrayList<Topic> topics = new ArrayList<>();
 
-    public PublisherImpl(String ipnew, int portnew, int idnew) {
+    public PublisherImpl1(String ipnew, int portnew, int idnew) {
         ip = ipnew;
         port = portnew;
         id = idnew;
@@ -41,7 +41,7 @@ public class PublisherImpl extends Thread implements Publisher {
     public void run(){
         Thread t1 = new Thread(){
             public void run(){
-                PublisherImpl.this.init(id);
+                PublisherImpl1.this.init(id);
             }
         };
         t1.start();
@@ -50,9 +50,9 @@ public class PublisherImpl extends Thread implements Publisher {
 
 
     public static void main(String[] args) {
-       int id = Integer.parseInt(args[0]);
-       PublisherImpl pub = (PublisherImpl) publishers.get(id);
-       pub.start();
+        int id = Integer.parseInt(args[0]);
+        PublisherImpl pub = (PublisherImpl) publishers.get(id);
+        pub.start();
     }
 
     @Override
@@ -156,53 +156,53 @@ public class PublisherImpl extends Thread implements Publisher {
         try {
             providerSocket = new ServerSocket(port);
 
-                for(int j = 0; j < brokers.size(); j++) {
-                    try {
-                        connection = providerSocket.accept();
-                        out = new ObjectOutputStream(connection.getOutputStream());
-                        in = new ObjectInputStream(connection.getInputStream());
+            for(int j = 0; j < brokers.size(); j++) {
+                try {
+                    connection = providerSocket.accept();
+                    out = new ObjectOutputStream(connection.getOutputStream());
+                    in = new ObjectInputStream(connection.getInputStream());
 
-                        out.writeObject("Server " + this.id + " successfully connected to Broker. ");
-                        out.flush();
+                    out.writeObject("Server " + this.id + " successfully connected to Broker. ");
+                    out.flush();
 
-                        message = (String) in.readObject();
+                    message = (String) in.readObject();
 
-                        System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
-                        int id = Integer.parseInt(message.split(" ")[0]);
-                        String ipB = message.split(" ")[1];
-                        String portB = message.split(" ")[2];
-                        Broker b = new BrokerImpl1(id, ipB, Integer.parseInt(portB));
-                        b.setRequestSocket(connection);
+                    System.out.println(connection.getInetAddress().getHostAddress() + "> " + message);
+                    int id = Integer.parseInt(message.split(" ")[0]);
+                    String ipB = message.split(" ")[1];
+                    String portB = message.split(" ")[2];
+                    Broker b = new BrokerImpl1(id, ipB, Integer.parseInt(portB));
+                    b.setRequestSocket(connection);
 
-                        Info<Topic> topic = (Info<Topic>) in.readObject();
-                        ArrayList<Topic> top = topic;
-                        b.setTopics(top);
-                        b.setRequestSocket(connection);
-                        brokers.set(id, b);
-                        System.out.println("Broker " + b.getPort() + ":");
-                        for(Topic t : b.getTopics()) {
-                            System.out.print(t.getBusLineId() + " ");
-                        }
-                        System.out.println("\n");
-
-                    } catch (ClassNotFoundException classnot) {
-                        System.err.println("Data received in unknown format");
+                    Info<Topic> topic = (Info<Topic>) in.readObject();
+                    ArrayList<Topic> top = topic;
+                    b.setTopics(top);
+                    b.setRequestSocket(connection);
+                    brokers.set(id, b);
+                    System.out.println("Broker " + b.getPort() + ":");
+                    for(Topic t : b.getTopics()) {
+                        System.out.print(t.getBusLineId() + " ");
                     }
+                    System.out.println("\n");
+
+                } catch (ClassNotFoundException classnot) {
+                    System.err.println("Data received in unknown format");
                 }
+            }
 
             while(true) {
-                    try {
-                        connection = providerSocket.accept();
-                        out = new ObjectOutputStream(connection.getOutputStream());
-                        in = new ObjectInputStream(connection.getInputStream());
-                        Topic newtopic = (Topic) in.readObject();
-                        push(newtopic.getBusLineId());
+                try {
+                    connection = providerSocket.accept();
+                    out = new ObjectOutputStream(connection.getOutputStream());
+                    in = new ObjectInputStream(connection.getInputStream());
+                    Topic newtopic = (Topic) in.readObject();
+                    push(newtopic.getBusLineId());
 
 
-                    } catch (Exception e) {
-                        //notifyFailure();
-                        e.printStackTrace();
-                    }
+                } catch (Exception e) {
+                    //notifyFailure();
+                    e.printStackTrace();
+                }
             }
         } catch (IOException ioException) {
             ioException.printStackTrace();
