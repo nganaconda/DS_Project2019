@@ -17,7 +17,7 @@ public class PublisherImpl extends Thread implements Publisher {
     private ArrayList<Bus> buses = new ArrayList<>();
     private static ArrayList<Value> values = new ArrayList<>();
     private ArrayList<Topic> topics = new ArrayList<>();
-    private static ArrayList<PublisherImpl> publishers = new ArrayList<PublisherImpl>();
+    //private static ArrayList<PublisherImpl> publishers = new ArrayList<PublisherImpl>();
 
     public PublisherImpl(String ipnew, int portnew, int idnew) {
         ip = ipnew;
@@ -26,6 +26,7 @@ public class PublisherImpl extends Thread implements Publisher {
     }
 
     public void run(){
+        //System.out.println("Current time: " + System.currentTimeMillis());
         Thread t1 = new Thread(){
             public void run(){
                 PublisherImpl.this.init(id);
@@ -37,25 +38,32 @@ public class PublisherImpl extends Thread implements Publisher {
 
 
     public static void main(String[] args) {
-        int numOfPubs = Integer.parseInt(args[0]);
-        if(numOfPubs == 0){
-            System.out.println("You have chosen to run no Publishers. ");
-        }
-        else{
-            for(int i = 1; i <= numOfPubs; i++) {
-                publishers.add(new PublisherImpl("192.168.56.1", 4321+i-1, i));
-            }
-            for(PublisherImpl p : publishers){
-                p.start();
-            }
-        }
+
+//        int numOfPubs = Integer.parseInt(args[0]);
+//        if(numOfPubs == 0){
+//            System.out.println("You have chosen to run no Publishers. ");
+//        }else if(numOfPubs>=21) {
+//            System.out.println("Too many publishers. ");
+//        }
+//        else{
+//            for(int i = 1; i <= numOfPubs; i++) {
+//                publishers.add(new PublisherImpl("192.168.1.5", 4321+i-1, i));
+//            }
+//            for(PublisherImpl p : publishers){
+//                p.start();
+//            }
+//        }
+
+        int id = Integer.parseInt(args[0]);
+        PublisherImpl p = (PublisherImpl) publishers.get(id);
+        p.start();
     }
 
     @Override
     public void init(int x) {
         int numberOfLines = 0;
         try{
-            File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLinesNew.txt");
+            File f1 = new File("src/busLinesNew.txt");
             BufferedReader br1 = new BufferedReader(new FileReader(f1));
             StringBuilder text = new StringBuilder();
             String line;
@@ -72,7 +80,7 @@ public class PublisherImpl extends Thread implements Publisher {
         int i = numberOfLines/publishers.size();
         int mod = numberOfLines % publishers.size();
 
-        int portionStart = (x - 1)*i + 1;
+        int portionStart = x*i + 1;
 
         int portionEnd;
         if(x == publishers.size()) {
@@ -87,7 +95,7 @@ public class PublisherImpl extends Thread implements Publisher {
 
         int lineNumber = 1;
         try {
-            File f1 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busLinesNew.txt");
+            File f1 = new File("src/busLinesNew.txt");
             BufferedReader br1 = new BufferedReader(new FileReader(f1));
             StringBuilder text1 = new StringBuilder();
 
@@ -100,7 +108,7 @@ public class PublisherImpl extends Thread implements Publisher {
                 while(lineNumber>=portionStart && lineNumber<=portionEnd) {
                     myLine = line.split(",");
                     Topic t = new Topic(myLine[0],myLine[1],myLine[2]);
-                    publishers.get(x-1).getTopics().add(t);
+                    publishers.get(x).getTopics().add(t);
 
                     line = br1.readLine();
                     text1.append(line + "\n");
@@ -109,19 +117,21 @@ public class PublisherImpl extends Thread implements Publisher {
                 lineNumber++;
             }
 
-            File f2 = new File("C:\\Users\\Owner\\AndroidStudioProjects\\src\\busPositionsNew.txt");
+            File f2 = new File("src/busPositionsNew.txt");
             BufferedReader br2 = new BufferedReader(new FileReader(f2));
             StringBuilder text2 = new StringBuilder();
 
             while((line = br2.readLine()) != null) {
-                for(int j=0;j < 50;j++) {
+                for(int j=0;j < 100;j++) {
                     if(line!=null) {
                         text2.append(line + "\n");
                         myLine = line.split(",");
                         Bus b = new Bus(myLine[0],myLine[1],myLine[2],myLine[5]);
-                        publishers.get(x-1).getBuses().add(b);
+                        publishers.get(x).getBuses().add(b);
                         Value v = new Value(b,Double.parseDouble(myLine[3]),Double.parseDouble(myLine[4]));
-                        publishers.get(x-1).getValues().add(v);
+                        publishers.get(x).getValues().add(v);
+
+                        //System.out.println("myLine is: " + myLine[5]); EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
                         line = br2.readLine();
                     }else {
                         break;
@@ -130,7 +140,7 @@ public class PublisherImpl extends Thread implements Publisher {
                 System.out.println("Publisher id is: " + id );
                 try {
 
-                    this.sleep(10000);
+                    this.sleep(5000);
                 }catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -149,6 +159,7 @@ public class PublisherImpl extends Thread implements Publisher {
         String message = null;
         try {
             providerSocket = new ServerSocket(port);
+
 
                 for(int j = 0; j < brokers.size(); j++) {
                     try {
@@ -194,7 +205,7 @@ public class PublisherImpl extends Thread implements Publisher {
 
 
                     } catch (Exception e) {
-                        notifyFailure();
+                        //notifyFailure();
                         e.printStackTrace();
                     }
             }
@@ -207,19 +218,36 @@ public class PublisherImpl extends Thread implements Publisher {
     public void push(String busLineId) {
         Tuple<Value> tupleList = new Tuple<>();
         String lineCode = null;
-        for(int i = 0; i < this.topics.size(); i++) {
+
+        long crtD = System.currentTimeMillis()/1000;
+        System.out.println("Current time before initializing the search for the busLineId: " + crtD);
+
+        for(int i = 0; i < this.topics.size(); i++) { // Checks the busLines the pub is responsible for
             if(busLineId.equals(this.topics.get(i).getBusLineId())) {
                 lineCode = this.topics.get(i).getLineCode();
-            }
-        }
-        if(lineCode != null) {
-            for(int i=0; i < this.values.size(); i++) {
-                if(lineCode.equals(this.values.get(i).getBus().getLineCode())) {
-                    tupleList.add(this.values.get(i));
+                boolean emptyValues = true;
+
+                while(emptyValues) {
+                    if(!this.values.isEmpty()) { // values list refreshes every 5sec
+                        for (int j = 0; j < this.values.size(); j++) { // Every 5sec this for gets bigger
+                            if(this.values.get(j) != null) { // unnecessary if
+                                if (lineCode.equals(this.values.get(j).getBus().getLineCode())) {
+                                    tupleList.add(this.values.get(j));
+                                }
+                            }
+
+                        }
+
+                        if(!tupleList.isEmpty()) {
+                            emptyValues = false;
+                        }
+                    }
 
                 }
             }
         }
+        System.out.println("Current time FINAL initializing the search for the busLine: " + busLineId +  " "  + System.currentTimeMillis()/1000);
+        System.out.println("Elapsed time: " + ((System.currentTimeMillis()/1000)-crtD) + " seconds.");
         if(!tupleList.isEmpty()) {
             System.out.println("TupleList size is: " + tupleList.size());
             try{
