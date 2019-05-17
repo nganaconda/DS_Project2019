@@ -17,15 +17,17 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     private int port;
     private String ip;
     private int hashipport;     //A hash of a string containing the ip and the port of the Broker
-    private Socket requestSocket;
+    private int noPublishers = 0;
+    private ServerSocket requestSocket;
     private ServerSocket replySocket = null;
-    public Socket connection;
+    public Socket connection = null;
     private ObjectOutputStream out = null;      //out is used to communicate with a Publisher
     private ObjectOutputStream outS = null;     //outS is used to communicate with a Subscriber
     private ObjectInputStream in = null;        //in is used to communicate with a Publisher
     private ObjectInputStream inS = null;       //inS is used to communicate with a Subscriber
     private static Info info;
     public ArrayList<Topic> topics = new ArrayList<Topic>();
+    public ArrayList<Value> values = new ArrayList<Value>();
     private List<PublisherImpl> registeredPublishers = new ArrayList<PublisherImpl>()
     {
     };
@@ -67,11 +69,11 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         this.topics = t;
     }
 
-    public void setRequestSocket(Socket soc) {
+    public void setRequestSocket(ServerSocket soc) {
         this.requestSocket = soc;
     }
 
-    public Socket getRequestSocket(){
+    public ServerSocket getRequestSocket(){
         return this.requestSocket;
     }
 
@@ -80,20 +82,44 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     public void run() {
         /* First the Thread establishes a connection with each Publisher in the registeredPublishers list and informs them of the
          * topics that it is responsible for. */
-        for (Publisher p : publishers) {
-            this.acceptConnection((PublisherImpl) p);
-            Info<Topic> topic = new Info<>();
-            for (Topic t : this.topics) {
-                topic.add(t);
-            }
-            this.notifyPublisher(topic);
+        try {
+            requestSocket = new ServerSocket(port+1);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        /* Then, the Thread establishes a connection with each Subscriber in the registeredSubscribers list. */
-        /*for(int i = 0; i < 1; i++){
 
-        }*/
+        Thread t1 = new Thread(){
+            public void run() {
+                while(true) {
+                    try {
+                        Socket conn = requestSocket.accept();
+                        out = new ObjectOutputStream(conn.getOutputStream());
+                        in = new ObjectInputStream(conn.getInputStream());
 
+                        if(in.readObject().equals(" ")){
+                            pull(new Topic(null));
+                        }
+                        else {
+                            PublisherImpl p = new PublisherImpl(registeredPublishers.size());
+                            p.socket = conn;
+                            acceptConnection(p);
+                            Info<Topic> topic = new Info<>();
+                            for (Topic top : topics) {
+                                topic.add(top);
+                            }
+                            notifyPublisher(topic);
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+        t1.start();
 
         /* The Thread now awaits for a new request from a Subscriber. That request is a String that will be used to create a new Topic
          * named topicAsked. */
@@ -121,22 +147,28 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                     break;
                 }
 
-                /* Now, if the topic asked is contained in the Thread's list of topics, method pull is called. */
+                Tuple<Value> tuple = new Tuple<>();
+
                 for (Topic t : this.topics) {
                     if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
-                        for (PublisherImpl pub : registeredPublishers) {
-                            try {
-                                requestSocket = new Socket(pub.getIP(), pub.getPort());
-                                in = new ObjectInputStream(requestSocket.getInputStream());
-                                out = new ObjectOutputStream(requestSocket.getOutputStream());
-
-                                this.pull(t);
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                        while(true) {
+                            for (Value value : values) {
+                                if (value.getBus().getLineCode().equals(t.getLineCode())) {
+                                    tuple.add(value);
+                                }
                             }
+                            if(tuple.size() > 0){
+                                break;
+                            }
+                        }
+                        try {
+                            outS.writeObject(tuple);
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
                     }
                 }
+
             }
         }
     }
@@ -173,34 +205,24 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     @Override
     public void acceptConnection(PublisherImpl pub) {
         String publisher;
-        while(true) {
-            try {
-                requestSocket = new Socket(pub.getIP(), pub.getPort());
-                out = new ObjectOutputStream(requestSocket.getOutputStream());
-                in = new ObjectInputStream(requestSocket.getInputStream());
-                pub.socket = requestSocket;
-                /*for (Publisher p : publishers) {
-                    if (p.getPort() == pub.getPort() && p.getIP().equals(pub.getIP())) {
-                        registeredPublishers.set(registeredPublishers.indexOf(p), pub);
-                    }
-                }*/
-                registeredPublishers.add(pub);
+        registeredPublishers.add(pub);
+        try {
+            out.writeObject(pub.getID());
+            out.writeObject(this.registeredPublishers.size());
+            System.out.println("Publisher " + pub.getID() + " connected. NumOfPubs is " + registeredPublishers.size());
 
-                try {
-                    publisher = (String) in.readObject();
-                    System.out.println("\nServer > " + publisher);
+            publisher = (String) in.readObject();
+            System.out.println("\nServer > " + publisher);
 
-                    out.writeObject(id + " " + ip + " " + port);
-                    out.flush();
-                    break;
-                } catch (ClassNotFoundException classNot) {
-                    System.out.println("data received in unknown format");
-                }
-            } catch (UnknownHostException unknownHost) {
-                System.err.println("You are trying to connect to an unknown host!");
-            } catch (IOException ioException) {
-            }
+
+            out.writeObject(id + " " + ip + " " + port);
+            out.flush();
+        } catch (ClassNotFoundException classNot) {
+            System.out.println("data received in unknown format");
         }
+        catch (IOException ioException) {
+        }
+
     }
 
     /* This method is used to establish a connection with a given Subscriber and to inform the said Subscriber of all the topics that
@@ -277,9 +299,51 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
      * the Tuple. */
     @Override
     public void pull(Topic topic) {
-        this.notifyPublisher(topic);
+        try {
+            out.writeObject(registeredPublishers.size());
+            Value value = (Value) in.readObject();
+            boolean found = false;
 
-        Tuple<Value> reply;
+            for(Topic t : topics){
+                if(t.getLineCode().equals(value.getBus().getLineCode())){
+                    for(Value val : values){
+                        if(val.getBus().getLineCode().equals(value.getBus().getLineCode())) {
+                            if (val.getBus().getRouteCode().equals(value.getBus().getRouteCode())) {
+                                found = true;
+                                values.set(values.indexOf(val), value);
+                            }
+                        }
+                    }
+
+                    if(found == false){
+                        values.add(value);
+                    }
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+        /*try{
+            Tuple<Value> repl = (Tuple<Value>) in.readObject();
+            for(int i = 0; i < values.size(); i++){
+                if(values.get(i).get(0).getBus().getLineCode().equals(repl.get(0).getBus().getLineCode())){
+                    values.set(i, repl);
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }*/
+
+
+       /* Tuple<Value> reply;
         try {
             String repl = (String) in.readObject();
             System.out.println(repl);
@@ -292,7 +356,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     /* This method is used in order for the current Broker Thread to Hash the Topics or buslineIDs found on busLines.txt
@@ -310,9 +374,13 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
 
             String line = "";
             String busID;
+            String lineCode;
+            String desc;
 
             while ((line = br.readLine()) != null) {
+                lineCode = line.split(",")[0];
                 busID = line.split(",")[1];
+                desc = line.split(",")[2];
 
                 /* This is where a hash is created based on a buslineID using the MD5 digestion. */
                 int hashtopic = 0;
@@ -382,7 +450,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
 
                 /* We finally add the Topic to the appropriate Broker */
                 for (Broker b : brokers) {
-                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(busID));
+                    if (b.getHashipport() == nearestNode) b.addTopics(new Topic(lineCode, busID, desc));
                 }
             }
             for(Broker b : brokers){
@@ -409,9 +477,9 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
     public void disconnect() {
         for (PublisherImpl p : registeredPublishers) {
             try {
-                requestSocket = new Socket(p.getIP(), p.getPort());
-                in = new ObjectInputStream(requestSocket.getInputStream());
-                out = new ObjectOutputStream(requestSocket.getOutputStream());
+                Socket conn = requestSocket.accept();
+                in = new ObjectInputStream(conn.getInputStream());
+                out = new ObjectOutputStream(conn.getOutputStream());
 
                 in.close();
                 out.close();

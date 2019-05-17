@@ -1,6 +1,7 @@
 package DS_as1;
 
 import java.io.Serializable;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,7 @@ public interface Broker extends Node
 
     public void setTopics(ArrayList<Topic> t);
 
-    public void setRequestSocket(Socket soc);
+    public void setRequestSocket(ServerSocket soc);
 
-    public Socket getRequestSocket();
+    public ServerSocket getRequestSocket();
 }

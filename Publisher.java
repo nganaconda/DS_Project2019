@@ -22,7 +22,7 @@ public interface Publisher extends Node
 
     public void setBuses(ArrayList<Bus> buses);
 
-    public void push(String busLineId);
+    public void push(Value value);
 
     public void notifyFailure();
 }
