@@ -8,16 +8,18 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
 public class BrokerImpl1 extends Thread implements Broker, Serializable
 {
+    private Thread t1;
     private int id;
     private int port;
     private String ip;
+    private int timeNow = 383936;
     private int hashipport;     //A hash of a string containing the ip and the port of the Broker
-    private int noPublishers = 0;
     private ServerSocket requestSocket;
     private ServerSocket replySocket = null;
     public Socket connection = null;
@@ -89,7 +91,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         }
 
 
-        Thread t1 = new Thread(){
+        t1 = new Thread(){
             public void run() {
                 while(true) {
                     try {
@@ -134,6 +136,28 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
             SubscriberImpl s = null;
             this.acceptConnection(s);
 
+            int currentTime = 0;
+
+            synchronized (this) {
+                for (Value val : values) {
+                    String current_time = val.getBus().getInfo().split(" ")[4];
+                    String amorpm = current_time.split(":")[3].substring(3);
+                    int time = Integer.parseInt(val.getBus().getInfo().split(" ")[2])*24*3600 + Integer.parseInt(current_time.split(":")[0])*3600 + Integer.parseInt(current_time.split(":")[1])*60 + Integer.parseInt(current_time.split(":")[2]);
+                    if(amorpm.equals("PM")&& Integer.parseInt(current_time.split(":")[0]) != 12) {
+                        time += 12*3600;
+                    }
+                    if(time >  currentTime) currentTime = time;
+                }
+            }
+
+            System.out.println("New Subscriber connected. ");
+            int date = currentTime/24/3600;
+            int hour = (currentTime - date*24*3600)/3600;
+            int minutes = (currentTime - date*24*3600 - hour*3600)/60;
+            int secs = (currentTime - date*24*3600 - hour*3600 - minutes*60);
+            System.out.println("Time connected is " + date + " March, " + hour + ":" + minutes + ":" + secs);
+
+
             while (true) {
                 try {
                     Socket connection = replySocket.accept();
@@ -142,33 +166,50 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
                 Topic topicAsked = this.getInfo();
-                if(topicAsked.getBusLineId().equals("bye")){
+                if (topicAsked.getBusLineId().equals("bye")) {
                     break;
                 }
 
-                Tuple<Value> tuple = new Tuple<>();
+                System.out.println("Retrieving data on requested topic...");
+                boolean concmod = true;
+                synchronized (this) {
+                    while (concmod == true) {
+                        Tuple<Value> tuple = new Tuple<>();
+                        try {
+                            concmod = false;
+                            for (Topic t : this.topics) {
+                                if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
 
-                for (Topic t : this.topics) {
-                    if (topicAsked.getBusLineId().equals(t.getBusLineId())) {
-                        while(true) {
-                            for (Value value : values) {
-                                if (value.getBus().getLineCode().equals(t.getLineCode())) {
-                                    tuple.add(value);
+                                    for (Value value : values) {
+                                        if (value.getBus().getLineCode().equals(t.getLineCode()) && this.clearValues(currentTime, value)) {
+                                            tuple.add(value);
+                                        }
+                                    }
                                 }
                             }
-                            if(tuple.size() > 0){
-                                break;
+
+                            if (tuple.size() == 0) {
+                                concmod = true;
+                                this.wait(1000);
+                            } else {
+                                try {
+                                    outS.writeObject(tuple);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
                             }
-                        }
-                        try {
-                            outS.writeObject(tuple);
-                        } catch (IOException e) {
+
+                        } catch (ConcurrentModificationException e) {
+                            System.out.println("Concurrent Mod");
+                            concmod = true;
+                            continue;
+                        } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
                 }
-
             }
         }
     }
@@ -208,7 +249,7 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         registeredPublishers.add(pub);
         try {
             out.writeObject(pub.getID());
-            out.writeObject(this.registeredPublishers.size());
+            out.writeObject(registeredPublishers.size());
             System.out.println("Publisher " + pub.getID() + " connected. NumOfPubs is " + registeredPublishers.size());
 
             publisher = (String) in.readObject();
@@ -294,11 +335,12 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
         return topic;
     }
 
+
     /* This method is used to obtain a Tuple of Values based on a Topic from a Publisher that is already connected to the current
      * Broker Thread if the said Publisher is responsible for that Topic. If he is, then he first sends a String "Yes", and then
      * the Tuple. */
     @Override
-    public void pull(Topic topic) {
+    public synchronized void pull(Topic topic) {
         try {
             out.writeObject(registeredPublishers.size());
             Value value = (Value) in.readObject();
@@ -321,42 +363,43 @@ public class BrokerImpl1 extends Thread implements Broker, Serializable
                 }
             }
 
+            int current = 0;
+            synchronized (this) {
+                for (Value val : values) {
+                    String current_time = val.getBus().getInfo().split(" ")[4];
+                    String amorpm = current_time.split(":")[3].substring(3);
+                    int time = Integer.parseInt(val.getBus().getInfo().split(" ")[2])*24*3600 + Integer.parseInt(current_time.split(":")[0])*3600 + Integer.parseInt(current_time.split(":")[1])*60 + Integer.parseInt(current_time.split(":")[2]);
+                    if(amorpm.equals("PM")&& Integer.parseInt(current_time.split(":")[0]) != 12) {
+                        time += 12*3600;
+                    }
+                    if(time >  current) current = time;
+                }
+            }
+
+            if(current >= timeNow + 3600) {
+                timeNow = current;
+                int date = timeNow / 24 / 3600;
+                int hour = (timeNow - date * 24 * 3600) / 3600;
+                int minutes = (timeNow - date * 24 * 3600 - hour * 3600) / 60;
+                int secs = (timeNow - date * 24 * 3600 - hour * 3600 - minutes * 60);
+                System.out.println("Time is " + date + " March, " + hour + ":" + minutes + ":" + secs);
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
 
+    }
 
-        /*try{
-            Tuple<Value> repl = (Tuple<Value>) in.readObject();
-            for(int i = 0; i < values.size(); i++){
-                if(values.get(i).get(0).getBus().getLineCode().equals(repl.get(0).getBus().getLineCode())){
-                    values.set(i, repl);
-                }
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }*/
-
-
-       /* Tuple<Value> reply;
-        try {
-            String repl = (String) in.readObject();
-            System.out.println(repl);
-            if(repl.equals("Yes")) {
-                reply = (Tuple<Value>) in.readObject();
-                outS.writeObject(reply);
-                outS.flush();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }*/
+    public boolean clearValues(int current, Value val) {
+        String current_time = val.getBus().getInfo().split(" ")[4];
+        int time = Integer.parseInt(val.getBus().getInfo().split(" ")[2]) * 24 * 3600 + Integer.parseInt(current_time.split(":")[0]) * 3600 + Integer.parseInt(current_time.split(":")[1]) * 60 + Integer.parseInt(current_time.split(":")[2]);
+        if (time < current - 120) {
+            return false;
+        }
+        return true;
     }
 
     /* This method is used in order for the current Broker Thread to Hash the Topics or buslineIDs found on busLines.txt

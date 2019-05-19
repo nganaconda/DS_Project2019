@@ -23,7 +23,7 @@ public class SubscriberImpl implements Subscriber {
     }
 
     public static void main(String[] args) {
-        SubscriberImpl sub = new SubscriberImpl("192.168.1.5", 1234);
+        SubscriberImpl sub = new SubscriberImpl("192.168.1.10", 1234);
         sub.connect();
         Scanner reader = new Scanner(System.in);
         File buslines = new File("DS_project_dataset/busLinesNew.txt");

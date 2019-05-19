@@ -121,6 +121,11 @@ public class PublisherImpl1 extends Thread implements Publisher {
 
                             } catch (Exception e) {
                             }
+                            try {
+                                this.sleep(50);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }
@@ -268,55 +273,6 @@ public class PublisherImpl1 extends Thread implements Publisher {
             e.printStackTrace();
         }
 
-
-        /*Tuple<Value> tupleList = new Tuple<>();
-        String lineCode = null;
-
-        long crtD = System.currentTimeMillis()/1000;
-        System.out.println("Current time before initializing the search for the busLineId: " + busLineId +  " "  + crtD);
-
-        for(int i = 0; i < this.topics.size(); i++) {
-            if(busLineId.equals(this.topics.get(i).getBusLineId())) {
-                lineCode = this.topics.get(i).getLineCode();
-                boolean emptyValues = true;
-
-                while(emptyValues == true) {
-                    if(!this.values.isEmpty()) {
-                        for (int j = 0; j < this.values.size(); j++) {
-                            if(this.values.get(j) != null) {
-                                if (lineCode.equals(this.values.get(j).getBus().getLineCode())) {
-                                    tupleList.add(this.values.get(j));
-                                }
-                            }
-                        }
-                        if(!tupleList.isEmpty()) {
-                            emptyValues = false;
-                        }
-                    }
-                    System.out.println("I am still searching....");
-                }
-            }
-        }
-
-        System.out.println("Current time FINAL initializing the search for the busLine: " + busLineId +  " "  + System.currentTimeMillis()/1000);
-        System.out.println("Elapsed time: " + ((System.currentTimeMillis()/1000)-crtD) + " seconds.");
-
-        if(!tupleList.isEmpty()) {
-            System.out.println("TupleList size is: " + tupleList.size());
-            try{
-                out.writeObject("Yes");
-                out.writeObject(tupleList);
-            }catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        else{
-            try{
-                out.writeObject("No");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }*/
     }
 
     public ArrayList<Topic> getTopics() {

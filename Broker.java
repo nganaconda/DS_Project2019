@@ -39,4 +39,6 @@ public interface Broker extends Node
     public void setRequestSocket(ServerSocket soc);
 
     public ServerSocket getRequestSocket();
+
+    public boolean clearValues(int current, Value val);
 }
