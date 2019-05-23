@@ -77,6 +77,7 @@ public class PublisherImpl extends Thread implements Publisher {
             try{
                 if ((line = br2.readLine()) != null) {
                     if(numOfPubs != numberOfPubs){
+                        numOfPubs = numberOfPubs;
                         this.prepare(x);
                     }
                     text2.append(line + "\n");
@@ -86,7 +87,7 @@ public class PublisherImpl extends Thread implements Publisher {
                         if (t.getLineCode().equals(myLine[0])) {
                             Bus b = new Bus(myLine[0], myLine[1], myLine[2], myLine[5]);
                             b.setLineName(t.getBusLineId());
-                            boolean newbus = true;
+                            /*boolean newbus = true;
                             ArrayList<Bus> buss = buses;
                             for (Bus bus : buss) {
                                 if (bus.getVehicleId().equals(b.getVehicleId()) && bus.getRouteCode().equals(b.getRouteCode())) {
@@ -96,9 +97,9 @@ public class PublisherImpl extends Thread implements Publisher {
                             }
                             if (newbus == true) {
                                 buses.add(b);
-                            }
+                            }*/
                             Value v = new Value(b, Double.parseDouble(myLine[3]), Double.parseDouble(myLine[4]));
-                            if (newbus == true) {
+                            /*if (newbus == true) {
                                 values.add(v);
                             } else {
                                 ArrayList<Value> vals = values;
@@ -107,7 +108,7 @@ public class PublisherImpl extends Thread implements Publisher {
                                         values.set(values.indexOf(val), v);
                                     }
                                 }
-                            }
+                            }*/
                             try {
                                 for(Broker br : brokers) {
                                     BrokerImpl bro = (BrokerImpl) br;
@@ -167,8 +168,8 @@ public class PublisherImpl extends Thread implements Publisher {
         } else {
             portionEnd = portionStart + i - 1;
         }
-           /* System.out.println("portionStart: " + portionStart);
-            System.out.println("portionEnd: " + portionEnd);*/
+            System.out.println("portionStart: " + portionStart);
+            System.out.println("portionEnd: " + portionEnd);
 
 
         //topo8etoume sth lista me ta topics auta gia ta opoia einai upeu8unos o trexwn pub
@@ -180,6 +181,7 @@ public class PublisherImpl extends Thread implements Publisher {
 
             String line;
             String[] myLine;
+            topics.clear();
 
             while ((line = br1.readLine()) != null) {
                 text1.append(line + "\n");
@@ -195,6 +197,11 @@ public class PublisherImpl extends Thread implements Publisher {
                 }
                 lineNumber++;
             }
+            System.out.println("This publisher is responsible for these line ids : line codes.");
+            for(Topic top : topics){
+                System.out.print(top.getBusLineId() + ":" + top.getLineCode() + " ");
+            }
+            System.out.println("\n...................................................................................................................................................................");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
